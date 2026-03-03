@@ -1,0 +1,21 @@
+<svg width="80" height="60" viewBox="0 0 80 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- ripples -->
+  <g fill="none" stroke="#6DA5FF" stroke-width="1.5">
+    <circle cx="40" cy="30" r="14">
+      <animate attributeName="r" values="14;28" dur="1.8s" repeatCount="indefinite" begin="0s" />
+      <animate attributeName="opacity" values="0.5;0" dur="1.8s" repeatCount="indefinite" begin="0s" />
+    </circle>
+    <circle cx="40" cy="30" r="14">
+      <animate attributeName="r" values="14;28" dur="1.8s" repeatCount="indefinite" begin="0.6s" />
+      <animate attributeName="opacity" values="0.5;0" dur="1.8s" repeatCount="indefinite" begin="0.6s" />
+    </circle>
+    <circle cx="40" cy="30" r="14">
+      <animate attributeName="r" values="14;28" dur="1.8s" repeatCount="indefinite" begin="1.2s" />
+      <animate attributeName="opacity" values="0.5;0" dur="1.8s" repeatCount="indefinite" begin="1.2s" />
+    </circle>
+  </g>
+  <!-- database -->
+  <path d="M28 22 C28 18.5 33.5 16 40 16 C46.5 16 52 18.5 52 22 L52 38 C52 41.5 46.5 44 40 44 C33.5 44 28 41.5 28 38 Z" fill="#F0ECE3" stroke="#D8D3C8" stroke-width="1" />
+  <ellipse cx="40" cy="22" rx="12" ry="4" fill="#D8D3C8" opacity="0.5" />
+  <ellipse cx="40" cy="30" rx="12" ry="4" fill="#D8D3C8" opacity="0.25" />
+</svg>

@@ -1,0 +1,10 @@
+<svg width="80" height="60" viewBox="0 0 80 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- left bracket -->
+  <path d="M32 14 C26 14 24 18 24 24 C24 28 20 30 16 30 C20 30 24 32 24 36 C24 42 26 46 32 46 L32 41 C29 41 29 38 29 36 C29 32 25 30 25 30 C25 30 29 28 29 24 C29 22 29 19 32 19 Z" fill="#F0ECE3" stroke="#D8D3C8" stroke-width="0.75" />
+  <!-- right bracket -->
+  <path d="M48 14 C54 14 56 18 56 24 C56 28 60 30 64 30 C60 30 56 32 56 36 C56 42 54 46 48 46 L48 41 C51 41 51 38 51 36 C51 32 55 30 55 30 C55 30 51 28 51 24 C51 22 51 19 48 19 Z" fill="#F0ECE3" stroke="#D8D3C8" stroke-width="0.75" />
+  <!-- cursor -->
+  <rect x="38" y="18" width="3.5" height="24" rx="1.75" fill="#1F2AE9">
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.5;0.6" dur="1.2s" repeatCount="indefinite" />
+  </rect>
+</svg>

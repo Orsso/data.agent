@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-everett), system-ui, sans-serif;
+  }
+
+  :root {
+    /* brand colors - cream/midnight theme */
+    --background: 39 100% 97%;        /* cream #FFFAF0 */
+    --foreground: 243 54% 11%;        /* midnight #0F0E2B */
+    --card: 0 0% 100%;                /* white */
+    --card-foreground: 243 54% 11%;   /* midnight */
+    --popover: 0 0% 100%;
+    --popover-foreground: 243 54% 11%;
+    --primary: 234 85% 52%;           /* cobalt #1F2AE9 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 39 50% 95%;          /* lighter cream */
+    --secondary-foreground: 243 54% 11%;
+    --muted: 39 30% 92%;
+    --muted-foreground: 243 20% 40%;
+    --accent: 216 100% 71%;           /* sky #6DA5FF */
+    --accent-foreground: 243 54% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 243 10% 85%;
+    --input: 243 10% 85%;
+    --ring: 234 85% 52%;              /* cobalt */
+    --chart-1: 234 85% 52%;           /* cobalt */
+    --chart-2: 216 100% 71%;          /* sky */
+    --chart-3: 243 54% 11%;           /* midnight */
+    --chart-4: 39 100% 70%;
+    --chart-5: 180 60% 50%;
+    --radius: 0.5rem;
+  }
+  .dark {
+    /* dark mode - midnight background */
+    --background: 243 54% 11%;        /* midnight */
+    --foreground: 39 100% 97%;        /* cream */
+    --card: 243 40% 15%;
+    --card-foreground: 39 100% 97%;
+    --popover: 243 40% 15%;
+    --popover-foreground: 39 100% 97%;
+    --primary: 216 100% 71%;          /* sky */
+    --primary-foreground: 243 54% 11%;
+    --secondary: 243 30% 20%;
+    --secondary-foreground: 39 100% 97%;
+    --muted: 243 30% 25%;
+    --muted-foreground: 39 30% 70%;
+    --accent: 234 85% 52%;            /* cobalt */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 243 30% 25%;
+    --input: 243 30% 25%;
+    --ring: 216 100% 71%;
+    --chart-1: 216 100% 71%;
+    --chart-2: 234 85% 52%;
+    --chart-3: 39 100% 97%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+/* streamdown / markdown prose */
+.prose-agent h1,
+.prose-agent h2,
+.prose-agent h3,
+.prose-agent h4 {
+  @apply font-semibold text-foreground;
+  margin-top: 1.25em;
+  margin-bottom: 0.5em;
+}
+.prose-agent h1 { @apply text-xl text-primary font-everett; }
+.prose-agent h2 { @apply text-lg text-primary font-everett; }
+.prose-agent h3 { @apply text-base; }
+
+.prose-agent p {
+  margin-bottom: 0.75em;
+  line-height: 1.65;
+}
+
+.prose-agent ul,
+.prose-agent ol {
+  @apply pl-5;
+  margin-bottom: 0.75em;
+}
+.prose-agent ul { list-style-type: disc; }
+.prose-agent ol { list-style-type: decimal; }
+.prose-agent li { margin-bottom: 0.25em; }
+
+.prose-agent blockquote {
+  @apply border-l-2 border-accent/40 pl-4 italic text-muted-foreground;
+  margin-bottom: 0.75em;
+}
+
+.prose-agent code:not(pre code) {
+  @apply rounded bg-muted px-1.5 py-0.5 text-[0.85em] font-mono;
+}
+
+.prose-agent pre {
+  @apply rounded-lg bg-muted/60 p-4 text-sm overflow-x-auto;
+  margin-bottom: 0.75em;
+}
+
+.prose-agent table {
+  @apply w-full border-collapse text-sm;
+  margin-bottom: 0.75em;
+}
+.prose-agent th {
+  @apply border-b border-border bg-muted/40 px-3 py-2 text-left font-medium;
+}
+.prose-agent td {
+  @apply border-b border-border/50 px-3 py-2;
+}
+
+.prose-agent a {
+  @apply text-primary underline underline-offset-2;
+}
+
+.prose-agent hr {
+  @apply my-6 border-border/50;
+}
+
+/* pulsing dots */
+@keyframes pulsing-dot {
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+.pulsing-dots span {
+  @apply inline-block size-1.5 rounded-full bg-primary;
+  animation: pulsing-dot 1.4s ease-in-out infinite;
+}
+.pulsing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.pulsing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+/* custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-border/60;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-border;
+}

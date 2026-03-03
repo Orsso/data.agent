@@ -1,0 +1,13 @@
+DEFAULT_MODEL = "gemini-3-flash-preview"
+
+PIPELINE_TIMEOUT = 90
+
+# Sandbox container resource limits
+SANDBOX_MEM_LIMIT = "512m"
+SANDBOX_CPU_QUOTA = 50000
+SANDBOX_PIDS_LIMIT = 100
+
+# Tool output truncation limits
+RESULT_DICT_MAX_CHARS = 1500
+RESULT_OTHER_MAX_CHARS = 300
+STDOUT_MAX_CHARS = 500

@@ -1,0 +1,21 @@
+<svg width="120" height="96" viewBox="0 0 120 96" xmlns="http://www.w3.org/2000/svg">
+  <!-- document -->
+  <rect x="24" y="8" width="72" height="80" rx="8" fill="#F0ECE3" stroke="#D8D3C8" stroke-width="1.5" />
+  <!-- corner fold -->
+  <path d="M72 8 L72 26 Q72 30 76 30 L96 30" fill="none" stroke="#D8D3C8" stroke-width="1.5" stroke-linejoin="round" />
+  <path d="M72 8 L96 8 L96 28 Q96 30 94 30 L76 30 Q72 30 72 28 Z" fill="#E6E1D7" />
+
+  <!-- animated data lines -->
+  <rect x="36" y="40" width="48" height="5" rx="2.5" fill="#1F2AE9" opacity="0">
+    <animate attributeName="opacity" values="0;0.55;0.55;0" keyTimes="0;0.2;0.75;1" dur="2s" repeatCount="indefinite" begin="0s" />
+    <animate attributeName="width" values="24;48;48;48" keyTimes="0;0.2;0.75;1" dur="2s" repeatCount="indefinite" begin="0s" />
+  </rect>
+  <rect x="36" y="52" width="36" height="5" rx="2.5" fill="#6DA5FF" opacity="0">
+    <animate attributeName="opacity" values="0;0.5;0.5;0" keyTimes="0;0.2;0.75;1" dur="2s" repeatCount="indefinite" begin="0.3s" />
+    <animate attributeName="width" values="18;36;36;36" keyTimes="0;0.2;0.75;1" dur="2s" repeatCount="indefinite" begin="0.3s" />
+  </rect>
+  <rect x="36" y="64" width="42" height="5" rx="2.5" fill="#1F2AE9" opacity="0">
+    <animate attributeName="opacity" values="0;0.35;0.35;0" keyTimes="0;0.2;0.75;1" dur="2s" repeatCount="indefinite" begin="0.6s" />
+    <animate attributeName="width" values="21;42;42;42" keyTimes="0;0.2;0.75;1" dur="2s" repeatCount="indefinite" begin="0.6s" />
+  </rect>
+</svg>

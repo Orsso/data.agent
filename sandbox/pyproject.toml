@@ -1,0 +1,15 @@
+[project]
+name = "data-agent-sandbox"
+version = "0.1.0"
+description = "Isolated Python execution sandbox for data-analysis-agent"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi~=0.133.0",
+    "uvicorn[standard]~=0.41.0",
+    "pandas~=3.0.1",
+    "numpy",
+    "plotly~=6.5.2",
+    "ipython~=9.4.0",
+    "pyarrow~=20.0.0",
+    "python-multipart~=0.0.22",
+]

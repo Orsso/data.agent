@@ -1,0 +1,84 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: data_agent
+      POSTGRES_PASSWORD: data_agent
+      POSTGRES_DB: data_agent
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U data_agent"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  sandbox-image:
+    build:
+      context: ./sandbox
+      dockerfile: Dockerfile
+    image: data-agent-sandbox:latest
+    entrypoint: ["true"]
+    restart: "no"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://data_agent:data_agent@db:5432/data_agent
+    volumes:
+      - logs:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    security_opt:
+      - label:disable
+    depends_on:
+      db:
+        condition: service_healthy
+      sandbox-image:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    networks:
+      - default
+      - sandbox-net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        REWRITE_API_ORIGIN: http://backend:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  logs:
+
+networks:
+  sandbox-net:
+    name: sandbox-net
+    driver: bridge

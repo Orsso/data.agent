@@ -1,0 +1,17 @@
+<svg width="80" height="60" viewBox="0 0 80 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- lens -->
+  <circle cx="34" cy="26" r="15" fill="#F0ECE3" stroke="#D8D3C8" stroke-width="1.5" />
+  <!-- handle -->
+  <rect x="46" y="36" width="5" height="16" rx="2.5" transform="rotate(-45, 48.5, 44)" fill="#D8D3C8" />
+
+  <!-- scanning dots -->
+  <circle cx="28" cy="26" r="2.5" fill="#1F2AE9" opacity="0">
+    <animate attributeName="opacity" values="0;0.7;0" dur="1.4s" repeatCount="indefinite" begin="0s" />
+  </circle>
+  <circle cx="34" cy="26" r="2.5" fill="#6DA5FF" opacity="0">
+    <animate attributeName="opacity" values="0;0.7;0" dur="1.4s" repeatCount="indefinite" begin="0.2s" />
+  </circle>
+  <circle cx="40" cy="26" r="2.5" fill="#1F2AE9" opacity="0">
+    <animate attributeName="opacity" values="0;0.7;0" dur="1.4s" repeatCount="indefinite" begin="0.4s" />
+  </circle>
+</svg>

@@ -1,0 +1,21 @@
+<svg width="80" height="60" viewBox="0 0 80 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- base line -->
+  <rect x="16" y="48" width="48" height="3" rx="1.5" fill="#D8D3C8" />
+
+  <!-- bars -->
+  <rect x="20" y="48" width="8" height="0" rx="2" fill="#1F2AE9">
+    <animate attributeName="height" values="0;18;18;0" keyTimes="0;0.25;0.75;1" dur="2s" repeatCount="indefinite" begin="0s" />
+    <animate attributeName="y" values="48;30;30;48" keyTimes="0;0.25;0.75;1" dur="2s" repeatCount="indefinite" begin="0s" />
+    <animate attributeName="opacity" values="0;0.6;0.6;0" keyTimes="0;0.25;0.75;1" dur="2s" repeatCount="indefinite" begin="0s" />
+  </rect>
+  <rect x="36" y="48" width="8" height="0" rx="2" fill="#6DA5FF">
+    <animate attributeName="height" values="0;30;30;0" keyTimes="0;0.25;0.75;1" dur="2s" repeatCount="indefinite" begin="0.25s" />
+    <animate attributeName="y" values="48;18;18;48" keyTimes="0;0.25;0.75;1" dur="2s" repeatCount="indefinite" begin="0.25s" />
+    <animate attributeName="opacity" values="0;0.7;0.7;0" keyTimes="0;0.25;0.75;1" dur="2s" repeatCount="indefinite" begin="0.25s" />
+  </rect>
+  <rect x="52" y="48" width="8" height="0" rx="2" fill="#1F2AE9">
+    <animate attributeName="height" values="0;22;22;0" keyTimes="0;0.25;0.75;1" dur="2s" repeatCount="indefinite" begin="0.5s" />
+    <animate attributeName="y" values="48;26;26;48" keyTimes="0;0.25;0.75;1" dur="2s" repeatCount="indefinite" begin="0.5s" />
+    <animate attributeName="opacity" values="0;0.45;0.45;0" keyTimes="0;0.25;0.75;1" dur="2s" repeatCount="indefinite" begin="0.5s" />
+  </rect>
+</svg>
