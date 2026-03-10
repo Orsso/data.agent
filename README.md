@@ -28,6 +28,74 @@ graph LR
     API -->|"docker.sock"| Sandbox
 ```
 
+## Database Schema
+
+```mermaid
+erDiagram
+    projects ||--o{ sources : "has"
+    projects ||--o{ chats : "has"
+    projects ||--o{ dashboard_cards : "has"
+    chats ||--o{ messages : "has"
+
+    projects {
+        UUID id PK
+        VARCHAR name
+        TEXT description
+        VARCHAR status
+        VARCHAR model
+        JSONB suggested_questions
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+
+    sources {
+        UUID id PK
+        UUID project_id FK
+        VARCHAR name
+        VARCHAR origin
+        INTEGER row_count
+        JSONB columns
+        JSONB profile
+        TIMESTAMPTZ created_at
+    }
+
+    chats {
+        UUID id PK
+        UUID project_id FK
+        VARCHAR title
+        JSONB pending_questions
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+
+    messages {
+        UUID id PK
+        UUID chat_id FK
+        VARCHAR role
+        TEXT content
+        TEXT code
+        JSONB tool_steps
+        JSONB todos
+        TEXT thinking
+        FLOAT thinking_duration_s
+        JSONB figs
+        JSONB proposals
+        JSONB asked_questions
+        TIMESTAMPTZ created_at
+    }
+
+    dashboard_cards {
+        UUID id PK
+        UUID project_id FK
+        VARCHAR type
+        VARCHAR title
+        TEXT code
+        TEXT value
+        JSONB fig
+        INTEGER position
+    }
+```
+
 ## Setup
 
 ```bash

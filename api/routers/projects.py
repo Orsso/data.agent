@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_project_manager, require_project
@@ -76,6 +76,8 @@ async def update_project(
     if updates:
         repo = ProjectRepository(db)
         row = await repo.update(row.id, **updates)
+        if row is None:
+            raise HTTPException(404, "Project not found")
     return project_response(row)
 
 
