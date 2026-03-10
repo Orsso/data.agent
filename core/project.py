@@ -5,7 +5,7 @@ import json
 import logging
 import time
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from langchain_core.messages import AIMessageChunk, HumanMessage
 from pydantic import TypeAdapter, ValidationError
@@ -53,7 +53,7 @@ class Project:
         self.model = model
         self.api_key = api_key
         self.sources = SourceRegistry()
-        self.dashboard_cards: list[DashboardCard] = []
+        self.dashboard_cards: list[DashboardCard] | None = None
 
         self.sandbox = sandbox_manager
         self.op_lock = asyncio.Lock()
@@ -101,12 +101,12 @@ class Project:
     def mark_graph_built(self) -> None:
         self._source_count_at_last_build = self.sources.count
 
-    async def run_pipeline(self, pipeline_type: str, turn: TurnState):
+    async def run_pipeline(self, pipeline_type: Literal["insights", "dashboard"], turn: TurnState):
         async with self.op_lock:
             async for event in self._run_pipeline_inner(pipeline_type, turn):
                 yield event
 
-    async def _run_pipeline_inner(self, pipeline_type: str, turn: TurnState):
+    async def _run_pipeline_inner(self, pipeline_type: Literal["insights", "dashboard"], turn: TurnState):
         if self.sources.is_empty:
             yield PipelineEvent(
                 source=pipeline_type,
@@ -201,12 +201,12 @@ class Project:
     def build_card_context(self, card_ids: list[str] | None) -> str | None:
         if not card_ids:
             return None
-        cards = [c for c in self.dashboard_cards if c.id in card_ids]
+        cards = [c for c in (self.dashboard_cards or []) if c.id in card_ids]
         if not cards:
             return None
         details = []
         for c in cards:
-            entry = f"- Title: {c.title}\n  Type: {c.type}"
+            entry = f"- ID: {c.id}\n  Title: {c.title}\n  Type: {c.type}"
             if c.code:
                 entry += f"\n  Code:\n```python\n{c.code}\n```"
             details.append(entry)
@@ -243,6 +243,8 @@ class Project:
                         yield TextChunkEvent(chunk=content)
                     elif isinstance(content, list):
                         for block in content:
+                            if not isinstance(block, dict):
+                                continue
                             if block.get("type") == "thinking":
                                 yield ThinkingEvent(content=block.get("thinking", ""))
                             elif block.get("type") == "text":
@@ -266,6 +268,8 @@ class Project:
                     for tmsg in chunk["tools"].get("messages", []):
                         content = tmsg.content if hasattr(tmsg, "content") else str(tmsg)
                         name = getattr(tmsg, "name", "unknown")
+                        if name == "ask_question":
+                            continue
                         success = getattr(tmsg, "status", "success") != "error"
                         yield ToolResultEvent(
                             tool_name=name,

@@ -25,12 +25,15 @@ import {
 import { ThinkingBlock } from '@/components/chat/thinking-block'
 import { TodoBlock } from '@/components/chat/todo-block'
 import { MessageFigures } from '@/components/chat/message-figures'
+import { CardProposals } from '@/components/chat/card-proposals'
+import { CardSelectionChips } from '@/components/chat/card-selection-chips'
 import { QuestionInput } from '@/components/chat/question-input'
 import { PulsingDots } from '@/components/ui/pulsing-dots'
 
 import { useProjectStore } from '@/lib/stores/project-store'
 import { useChatsStore } from '@/lib/stores/chats-store'
 import { useChatStore } from '@/lib/stores/chat-store'
+import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import { useProjectChat } from '@/lib/hooks/use-project-chat'
 import { listMessages } from '@/lib/backend-client'
 import { NEW_CHAT_ID } from '@/lib/constants'
@@ -55,10 +58,9 @@ export default function ProjectChatPage() {
   const isLoading = useChatStore((s) => s.isLoading)
   const isStreaming = useChatStore((s) => s.isStreaming)
   const streamingMessage = useChatStore((s) => s.streamingMessage)
-  const pendingQuestions = useChatStore((s) => s.pendingQuestions)
-  const answerQuestions = useChatStore((s) => s.answerQuestions)
 
   const { sendMessage, resumeChat, resolvedChatId } = useProjectChat(projectId, chatId)
+  const clearSelection = useDashboardStore((s) => s.clearSelection)
 
   useEffect(() => {
     setActiveChatId(chatId)
@@ -91,9 +93,12 @@ export default function ProjectChatPage() {
   const handleSubmit = useCallback(
     async ({ text }: { text: string }) => {
       if (!text.trim()) return
-      await sendMessage(text.trim())
+      const { selectedCardIds: cardIds } = useDashboardStore.getState()
+      const ids = cardIds.length > 0 ? [...cardIds] : undefined
+      clearSelection()
+      await sendMessage(text.trim(), ids)
     },
-    [sendMessage]
+    [sendMessage, clearSelection]
   )
 
   const handleSuggestionClick = useCallback(
@@ -105,20 +110,27 @@ export default function ProjectChatPage() {
 
   const handleQuestionSubmit = useCallback(
     (answers: Record<string, string>) => {
-      const answerText = Object.values(answers).join(', ')
-      answerQuestions(answerText)
+      useChatStore.getState().answerQuestions(answers)
       resumeChat(answers)
     },
-    [answerQuestions, resumeChat]
+    [resumeChat]
+  )
+
+  // Detect if the last message has unanswered questions
+  const lastMsg = messages[messages.length - 1]
+  const hasPendingQuestions = !!(
+    lastMsg?.role === 'assistant' &&
+    lastMsg.asked_questions?.length &&
+    lastMsg.asked_questions.some((q) => !q.selected_answer)
   )
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    if (!isStreaming && !pendingQuestions) {
+    if (!isStreaming && !hasPendingQuestions) {
       textareaRef.current?.focus()
     }
-  }, [isStreaming, pendingQuestions])
+  }, [isStreaming, hasPendingQuestions])
 
   const hasSources = sources.length > 0
   const showAnalyzing = isAnalyzing && messages.length === 0 && !isLoading
@@ -192,34 +204,30 @@ export default function ProjectChatPage() {
                   ) : msg.content ? (
                     <MessageContent>
                       <MessageResponse>{msg.content}</MessageResponse>
-                      {msg.has_figures && msg.figure_count > 0 && (
-                        <MessageFigures
-                          projectId={projectId}
-                          chatId={resolvedChatId}
-                          messageId={msg.backend_msg_id || msg.id}
-                          figureCount={msg.figure_count}
-                        />
-                      )}
                     </MessageContent>
                   ) : null}
+                  {msg.has_figures && msg.figure_count > 0 && (
+                    <MessageFigures
+                      projectId={projectId}
+                      chatId={resolvedChatId}
+                      messageId={msg.backend_msg_id || msg.id}
+                      figureCount={msg.figure_count}
+                      code={msg.code}
+                    />
+                  )}
+                  {msg.proposals && msg.proposals.length > 0 && (
+                    <CardProposals
+                      projectId={projectId}
+                      chatId={resolvedChatId}
+                      messageId={msg.backend_msg_id || msg.id}
+                      proposals={msg.proposals}
+                    />
+                  )}
                   {msg.asked_questions && msg.asked_questions.length > 0 && (
-                    <div className="space-y-3 py-1">
-                      {msg.asked_questions.map((q, qi) => (
-                        <div key={qi} className="space-y-2">
-                          <p className="text-sm font-medium">{q.question}</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {q.options.map((opt, oi) => (
-                              <span
-                                key={oi}
-                                className="inline-flex rounded-md border border-border/50 px-2 py-1 text-xs text-muted-foreground"
-                              >
-                                {opt.label}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    <QuestionInput
+                      questions={msg.asked_questions}
+                      onSubmit={msg === lastMsg && hasPendingQuestions ? handleQuestionSubmit : undefined}
+                    />
                   )}
                 </Message>
               </motion.div>
@@ -259,14 +267,6 @@ export default function ProjectChatPage() {
             </motion.div>
           )}
 
-          {pendingQuestions && (
-            <Message from="assistant">
-              <QuestionInput
-                questions={pendingQuestions}
-                onSubmit={handleQuestionSubmit}
-              />
-            </Message>
-          )}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
@@ -289,16 +289,17 @@ export default function ProjectChatPage() {
           )}
           <div className="rounded-xl border border-border/40 bg-card shadow-lg">
             <PromptInput onSubmit={handleSubmit}>
+              <CardSelectionChips />
               <PromptInputTextarea
                 ref={textareaRef}
                 placeholder={placeholderText}
-                disabled={isStreaming || !!pendingQuestions}
+                disabled={isStreaming || hasPendingQuestions}
                 className="border-0 bg-transparent focus-visible:ring-0"
               />
               <PromptInputFooter>
                 <div />
                 <PromptInputSubmit
-                  disabled={isStreaming || !!pendingQuestions}
+                  disabled={isStreaming || hasPendingQuestions}
                   className="bg-primary hover:bg-primary/90"
                 />
               </PromptInputFooter>

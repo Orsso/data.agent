@@ -4,6 +4,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, Discriminator, Tag
 
 TodoStatus = Literal["pending", "in_progress", "completed"]
+ProposalStatus = Literal["pending", "accepted", "rejected"]
 
 
 @dataclass
@@ -18,6 +19,7 @@ class Question:
     header: str = ""
     options: list[Choice] = field(default_factory=list)
     multi_select: bool = False
+    selected_answer: str | None = None
 
 
 @dataclass
@@ -93,6 +95,20 @@ class ToolStep:
 
 
 @dataclass
+class CardProposal:
+    proposal_id: str
+    card_id: str
+    card_title: str
+    current_fig: dict | None
+    current_code: str | None
+    current_value: str | None
+    proposed_fig: dict | None
+    proposed_code: str | None
+    proposed_value: str | None
+    status: ProposalStatus = "pending"
+
+
+@dataclass
 class ChatMessage:
     role: str
     content: str
@@ -101,6 +117,8 @@ class ChatMessage:
     figs: list[dict] = field(default_factory=list)
     tool_steps: list[ToolStep] = field(default_factory=list)
     todos: list[TodoItem] = field(default_factory=list)
+    proposals: list[CardProposal] = field(default_factory=list)
+    asked_questions: list["Question"] | None = None
     thinking: str | None = None
     thinking_duration_s: float | None = None
 

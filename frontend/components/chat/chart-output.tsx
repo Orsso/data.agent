@@ -1,8 +1,8 @@
 'use client'
 
-import { memo, useMemo } from 'react'
+import { memo, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { LayoutGridIcon } from 'lucide-react'
+import { CheckIcon, LayoutGridIcon } from 'lucide-react'
 import type * as Plotly from 'plotly.js'
 import { Button } from '@/components/ui/button'
 import { useProjectStore } from '@/lib/stores/project-store'
@@ -24,12 +24,14 @@ const Plot = dynamic(() => import('./plotly-lazy'), {
 interface ChartOutputProps {
   figure: PlotlyFigure | string
   title?: string
+  code?: string
   sourceAction?: boolean
 }
 
-function ChartOutputComponent({ figure, title, sourceAction = true }: ChartOutputProps) {
+function ChartOutputComponent({ figure, title, code, sourceAction = true }: ChartOutputProps) {
   const projectId = useProjectStore((s) => s.projectId)
   const addCard = useDashboardStore((s) => s.addCard)
+  const [added, setAdded] = useState(false)
   const divId = useMemo(() => `plotly-${crypto.randomUUID()}`, [])
 
   const parsedFigure = useMemo<PlotlyFigure>(() => {
@@ -46,14 +48,16 @@ function ChartOutputComponent({ figure, title, sourceAction = true }: ChartOutpu
   }, [figure])
 
   const handleAddToDashboard = async () => {
-    if (!projectId) return
+    if (!projectId || added) return
 
     try {
       await addCard(projectId, {
         type: 'chart',
         title: title || 'Chart',
+        code,
         fig: parsedFigure,
       })
+      setAdded(true)
     } catch (err) {
       console.error('Failed to add to dashboard:', err)
     }
@@ -92,11 +96,21 @@ function ChartOutputComponent({ figure, title, sourceAction = true }: ChartOutpu
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 gap-2 text-xs text-muted-foreground hover:text-foreground"
+            className={`h-8 gap-2 text-xs ${added ? 'text-emerald-500' : 'text-muted-foreground hover:text-foreground'}`}
             onClick={handleAddToDashboard}
+            disabled={added}
           >
-            <LayoutGridIcon className="h-3.5 w-3.5" />
-            Add to Dashboard
+            {added ? (
+              <>
+                <CheckIcon className="h-3.5 w-3.5" />
+                Added
+              </>
+            ) : (
+              <>
+                <LayoutGridIcon className="h-3.5 w-3.5" />
+                Add to Dashboard
+              </>
+            )}
           </Button>
         </div>
       )}

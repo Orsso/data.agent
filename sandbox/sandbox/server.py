@@ -19,7 +19,7 @@ _start_time = time.monotonic()
 SOURCES_DIR = Path("/data/sources")
 
 # Names that must not be overwritten in the IPython namespace.
-_RESERVED_NAMES = frozenset({"pd", "px", "go", "np", "re", "fig", "result", "cards", "__builtins__"})
+_RESERVED_NAMES = frozenset({"pd", "px", "go", "np", "re", "fig", "result", "cards", "card_updates", "__builtins__"})
 
 
 def _validate_df_name(name: str) -> None:
@@ -41,6 +41,7 @@ async def execute(req: ExecuteRequest) -> ExecuteResponse:
             figures=result.figures,
             result=result.result,
             cards=result.cards,
+            card_updates=result.card_updates,
             error=result.error,
             duration_ms=result.duration_ms,
         )

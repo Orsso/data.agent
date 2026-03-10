@@ -93,6 +93,7 @@ class ChatResponse(BaseModel):
     id: str
     project_id: str
     title: str | None
+    pending_questions: list | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -102,6 +103,7 @@ def chat_response(row: ChatRow) -> ChatResponse:
         id=str(row.id),
         project_id=str(row.project_id),
         title=row.title,
+        pending_questions=row.pending_questions,
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
@@ -129,15 +131,39 @@ class ToolStepResponse(BaseModel):
     duration_ms: int
 
 
+class CardProposalResponse(BaseModel):
+    proposal_id: str
+    card_id: str
+    card_title: str
+    current_fig: dict | None = None
+    current_code: str | None = None
+    current_value: str | None = None
+    proposed_fig: dict | None = None
+    proposed_code: str | None = None
+    proposed_value: str | None = None
+    status: str
+
+
+class QuestionResponse(BaseModel):
+    question: str
+    header: str = ""
+    options: list[dict] = []
+    multi_select: bool = False
+    selected_answer: str | None = None
+
+
 class MessageHistoryItem(BaseModel):
     id: str
     role: str
     content: str
+    code: str | None = None
     thinking: str | None = None
     thinking_duration_s: float | None = None
     tool_steps: list[ToolStepResponse] | None = None
     figure_count: int
     todos: list[TodoItemResponse] | None = None
+    proposals: list[CardProposalResponse] | None = None
+    asked_questions: list[QuestionResponse] | None = None
     created_at: datetime
 
 
@@ -161,6 +187,12 @@ def card_response(row: DashboardCardRow) -> DashboardCardResponse:
         fig=row.fig,
         position=row.position,
     )
+
+
+class UpdateDashboardCardRequest(BaseModel):
+    code: str | None = None
+    value: str | None = None
+    fig: dict | None = None
 
 
 class AddDashboardCardRequest(BaseModel):

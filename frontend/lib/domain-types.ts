@@ -1,4 +1,4 @@
-import type { PlotlyFigure, Question, TodoItem } from './api-types'
+import type { CardProposal, PlotlyFigure, Question, TodoItem } from './api-types'
 
 export interface ToolStep {
   tool_name: string
@@ -17,12 +17,14 @@ export interface Message {
   backend_msg_id?: string
   role: 'user' | 'assistant'
   content: string
+  code?: string
   cot_entries: CotEntry[]
   thinking_duration_s?: number
   asked_questions?: Question[]
   todos?: TodoItem[]
   has_figures: boolean
   figure_count: number
+  proposals?: CardProposal[]
   is_error?: boolean
 }
 
@@ -32,6 +34,7 @@ export interface StreamingMessage {
   cot_entries: CotEntry[]
   active_tool?: { name: string; args: string }
   todos?: TodoItem[]
+  proposals?: CardProposal[]
   content: string
 }
 

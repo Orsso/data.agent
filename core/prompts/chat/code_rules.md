@@ -6,6 +6,7 @@ DO:
 - For charts: set meaningful titles and axis labels. Use px for simple charts, go for complex layouts.
 - For high-cardinality columns (>20 unique): aggregate or show top N, never plot all values.
 - Assign outputs to: `fig` (one Plotly Figure), `result` (data/dict), `cards` (dashboard list).
+- When dashboard cards are selected for modification, assign updated figures to `card_updates = {"<card_id>": fig}`. Do NOT use `fig` for card modifications — `fig` creates new standalone charts, `card_updates` proposes edits to existing cards.
 - One chart per `execute_python` call. If you need 3 charts, call `execute_python` 3 separate times.
 - Use `result` for data inspection steps (describe, value_counts, shape) — no chart needed.
 

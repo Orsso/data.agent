@@ -79,6 +79,7 @@ class ChatRow(Base):
         UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
     )
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    pending_questions: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -113,6 +114,8 @@ class MessageRow(Base):
     thinking: Mapped[str | None] = mapped_column(Text, nullable=True)
     thinking_duration_s: Mapped[float | None] = mapped_column(nullable=True)
     figs: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    proposals: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    asked_questions: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

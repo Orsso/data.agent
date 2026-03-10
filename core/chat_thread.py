@@ -8,6 +8,7 @@ from langgraph.types import Command
 
 from core.events import (
     AskQuestionEvent,
+    CardProposalsEvent,
     ChatRenamedEvent,
     DoneEvent,
     TextChunkEvent,
@@ -23,6 +24,7 @@ from core.project import Project
 from core.prompts import DATA_QUERY, build_chat_system
 from core.state import (
     Answer,
+    CardProposal,
     ChatMessage,
     Choice,
     LoopResult,
@@ -104,6 +106,8 @@ class ChatThread:
     async def _run_chat_inner(self, query: str, selected_card_ids: list[str] | None = None):
         self.chat.todos = []
         self.turn.reset()
+        self.turn.selected_card_ids = selected_card_ids or []
+        self.chat.selected_card_ids = selected_card_ids or []
         self._ensure_graph_fresh()
 
         self.chat.messages.append(
@@ -129,11 +133,22 @@ class ChatThread:
 
     async def _resume_chat_inner(self, answers: list[Answer]):
         self.turn.reset()
-        msg_id = self.chat.pending_msg_id or uuid.uuid4().hex[:8]
-        resume_value = {"answers": [{"question": a.question, "answer": a.answer} for a in answers]}
+        self.turn.selected_card_ids = self.chat.selected_card_ids
+        self.chat.pending_questions = None
+        self.chat.pending_msg_id = None
+        msg_id = uuid.uuid4().hex[:8]
 
+        answer_map = {a.question: a.answer for a in answers}
+        last_msg = self.chat.messages[-1] if self.chat.messages else None
+        if last_msg and last_msg.asked_questions:
+            for q in last_msg.asked_questions:
+                if q.question in answer_map:
+                    q.selected_answer = answer_map[q.question]
+
+        resume_value = {"answers": [{"question": a.question, "answer": a.answer} for a in answers]}
         async for event in self._stream_and_finalize(
             Command(resume=resume_value), msg_id,
+            selected_card_ids=self.chat.selected_card_ids,
         ):
             yield event
 
@@ -161,7 +176,7 @@ class ChatThread:
                 if isinstance(event, ToolResultEvent) and event.tool_name == "todo":
                     yield self._make_todo_event()
 
-            state = await self._graph.aget_state(config)
+            state = await self._graph.aget_state(config)  # type: ignore[arg-type]
             if state.next:
                 questions = self._extract_interrupt_questions(state)
                 logger.info(
@@ -169,10 +184,29 @@ class ChatThread:
                     self.chat_id, len(questions), state.next,
                 )
                 if questions:
+                    self.chat.pending_questions = questions
                     yield AskQuestionEvent(questions=questions)
+
+                content = "".join(content_parts).strip()
+                thinking = "".join(thinking_parts) if thinking_parts else None
+                has_cot = thinking or tool_steps
+                elapsed_s = time.perf_counter() - t0
+                partial_msg = ChatMessage(
+                    role="assistant",
+                    content=content,
+                    msg_id=msg_id,
+                    code=self.turn.code,
+                    tool_steps=tool_steps,
+                    asked_questions=questions if questions else None,
+                    thinking=thinking,
+                    thinking_duration_s=round(elapsed_s, 1) if has_cot and elapsed_s else None,
+                )
+                partial_msg.figs = list(self.turn.figs)
+                self.chat.messages.append(partial_msg)
+
                 self.chat.pending_msg_id = msg_id
                 yield DoneEvent(
-                    loop_result=LoopResult(content="".join(content_parts).strip(), pending=True),
+                    loop_result=LoopResult(content=content, pending=True, figs=list(self.turn.figs)),
                     msg_id=msg_id,
                 )
             else:
@@ -181,6 +215,9 @@ class ChatThread:
                     content_parts, tool_steps, thinking_parts,
                     msg_id, selected_card_ids, elapsed_s=elapsed_s,
                 )
+                last_msg = self.chat.messages[-1]
+                if last_msg.proposals:
+                    yield CardProposalsEvent(proposals=last_msg.proposals)
                 yield DoneEvent(
                     loop_result=make_loop_result(content_parts, self.turn),
                     msg_id=msg_id,
@@ -307,12 +344,24 @@ class ChatThread:
         figs = list(self.turn.figs)
         code = self.turn.code
 
+        proposals = []
         selected_cards = [
-            c for c in self._project.dashboard_cards if c.id in (selected_card_ids or [])
+            c for c in (self._project.dashboard_cards or []) if c.id in (selected_card_ids or [])
         ]
-        if figs and len(selected_cards) == 1:
-            selected_cards[0].fig = figs[-1]
-            selected_cards[0].code = code
+        for card in selected_cards:
+            proposed_fig = self.turn.card_updates.get(card.id)
+            if proposed_fig is not None:
+                proposals.append(CardProposal(
+                    proposal_id=uuid.uuid4().hex[:8],
+                    card_id=card.id,
+                    card_title=card.title,
+                    current_fig=card.fig,
+                    current_code=card.code,
+                    current_value=card.value,
+                    proposed_fig=proposed_fig,
+                    proposed_code=code,
+                    proposed_value=None,
+                ))
 
         thinking = "".join(thinking_parts) if thinking_parts else None
         has_cot = thinking or tool_steps
@@ -330,4 +379,5 @@ class ChatThread:
             thinking_duration_s=round(elapsed_s, 1) if has_cot and elapsed_s else None,
         )
         msg.figs = figs
+        msg.proposals = proposals
         self.chat.messages.append(msg)

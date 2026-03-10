@@ -39,6 +39,12 @@ class ChatRepository:
         await self._session.flush()
         return row
 
+    async def update_pending_questions(self, chat_id: uuid.UUID, questions: list | None) -> None:
+        row = await self.get(chat_id)
+        if row is not None:
+            row.pending_questions = questions
+            await self._session.flush()
+
     async def delete(self, chat_id: uuid.UUID) -> bool:
         row = await self.get(chat_id)
         if row is None:

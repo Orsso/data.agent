@@ -23,16 +23,20 @@ function toDashboardCard(card: ProjectDashboardCard): DashboardCard {
 
 interface DashboardState {
   dashboardCards: Record<string, DashboardCard[]>
+  selectedCardIds: string[]
   isGeneratingDashboard: boolean
 
   loadCards: (projectId: string) => Promise<void>
   addCard: (projectId: string, card: Omit<DashboardCard, 'id' | 'position'> & { id?: string }) => Promise<void>
   removeCard: (projectId: string, id: string) => Promise<void>
   generateDashboard: (projectId: string) => Promise<void>
+  toggleCardSelection: (cardId: string) => void
+  clearSelection: () => void
 }
 
 export const useDashboardStore = create<DashboardState>()((set) => ({
   dashboardCards: {},
+  selectedCardIds: [] as string[],
   isGeneratingDashboard: false,
 
   loadCards: async (projectId) => {
@@ -88,6 +92,16 @@ export const useDashboardStore = create<DashboardState>()((set) => ({
       console.error('Failed to remove dashboard card:', error)
     }
   },
+
+  toggleCardSelection: (cardId) => set((state) => ({
+    selectedCardIds: state.selectedCardIds.includes(cardId)
+      ? state.selectedCardIds.filter((id) => id !== cardId)
+      : [...state.selectedCardIds, cardId],
+  })),
+
+  clearSelection: () => set((state) =>
+    state.selectedCardIds.length === 0 ? state : { selectedCardIds: [] }
+  ),
 
   generateDashboard: async (projectId) => {
     set({ isGeneratingDashboard: true })

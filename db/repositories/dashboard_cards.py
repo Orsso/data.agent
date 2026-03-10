@@ -70,6 +70,27 @@ class DashboardCardRepository:
         await self._session.flush()
         return row
 
+    async def update_card(
+        self,
+        card_id: uuid.UUID,
+        code: str | None = None,
+        value: str | None = None,
+        fig: dict | None = None,
+    ) -> DashboardCardRow | None:
+        stmt = select(DashboardCardRow).where(DashboardCardRow.id == card_id)
+        result = await self._session.execute(stmt)
+        row = result.scalar_one_or_none()
+        if row is None:
+            return None
+        if code is not None:
+            row.code = code
+        if value is not None:
+            row.value = value
+        if fig is not None:
+            row.fig = fig
+        await self._session.flush()
+        return row
+
     async def delete_card(self, card_id: uuid.UUID) -> bool:
         stmt = select(DashboardCardRow).where(DashboardCardRow.id == card_id)
         result = await self._session.execute(stmt)

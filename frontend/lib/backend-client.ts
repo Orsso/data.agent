@@ -1,10 +1,12 @@
 import type {
+  CardProposal,
   ChatSummary,
   PlotlyFigure,
   ProjectDashboardCard,
   ProjectInfo,
   ProjectSource,
   ProjectSummary,
+  Question,
   SSEEvent,
   TodoItem,
 } from './api-types'
@@ -116,6 +118,12 @@ export async function renameChat(projectId: string, chatId: string, title: strin
   return res.json()
 }
 
+export async function getChat(projectId: string, chatId: string): Promise<ChatSummary> {
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/chats/${chatId}`)
+  if (!res.ok) throw new Error(await readErrorMessage(res, 'Failed to fetch chat'))
+  return res.json()
+}
+
 export async function deleteChat(projectId: string, chatId: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/projects/${projectId}/chats/${chatId}`, {
     method: 'DELETE',
@@ -129,11 +137,14 @@ export interface MessageHistoryItem {
   id: string
   role: 'user' | 'assistant'
   content: string
+  code: string | null
   thinking: string | null
   thinking_duration_s: number | null
   tool_steps: ToolStep[] | null
   figure_count: number
   todos: TodoItem[] | null
+  proposals: CardProposal[] | null
+  asked_questions: Question[] | null
   created_at: string
 }
 
@@ -283,4 +294,32 @@ export async function removeDashboardCard(projectId: string, cardId: string): Pr
     method: 'DELETE',
   })
   if (!res.ok) throw new Error(await readErrorMessage(res, 'Failed to remove dashboard card'))
+}
+
+export async function acceptProposal(
+  projectId: string,
+  chatId: string,
+  messageId: string,
+  proposalId: string,
+): Promise<unknown> {
+  const res = await fetch(
+    `${API_BASE}/api/projects/${projectId}/chats/${chatId}/messages/${messageId}/proposals/${proposalId}/accept`,
+    { method: 'POST' },
+  )
+  if (!res.ok) throw new Error(await readErrorMessage(res, 'Failed to accept proposal'))
+  return res.json()
+}
+
+export async function rejectProposal(
+  projectId: string,
+  chatId: string,
+  messageId: string,
+  proposalId: string,
+): Promise<unknown> {
+  const res = await fetch(
+    `${API_BASE}/api/projects/${projectId}/chats/${chatId}/messages/${messageId}/proposals/${proposalId}/reject`,
+    { method: 'POST' },
+  )
+  if (!res.ok) throw new Error(await readErrorMessage(res, 'Failed to reject proposal'))
+  return res.json()
 }

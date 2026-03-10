@@ -21,6 +21,7 @@ async def execute_python(code: str, config: RunnableConfig) -> str:
     - `fig`    → ONE Plotly Figure displayed in the chat. One chart per call.
     - `result` → Data returned to you (dict, list, scalar). Use for inspection or intermediate values.
     - `cards`  → Dashboard card list.
+    - `card_updates` → Dict mapping card IDs to new Plotly figures. MANDATORY when modifying selected dashboard cards. Using `fig` when cards are selected creates a new chart instead of updating the card.
     Any other variable name (fig1, my_chart, etc.) is IGNORED for display. NEVER call fig.show().
 
     ENVIRONMENT:
@@ -61,6 +62,7 @@ async def execute_python(code: str, config: RunnableConfig) -> str:
     # Update turn state with sandbox response
     figs = response.get("figures", [])
     cards = response.get("cards", [])
+    card_updates = response.get("card_updates", {})
     result = response.get("result")
     stdout = response.get("stdout", "")
 
@@ -68,6 +70,8 @@ async def execute_python(code: str, config: RunnableConfig) -> str:
         ctx.turn.figs.extend(figs)
     if cards:
         ctx.turn.cards.extend(cards)
+    if card_updates:
+        ctx.turn.card_updates.update(card_updates)
     ctx.turn.code = code
     if result is not None:
         ctx.turn.result = result
@@ -88,15 +92,25 @@ async def execute_python(code: str, config: RunnableConfig) -> str:
         raise CodeExecutionError("\n".join(parts))
 
     logger.info(
-        "execute_python result: %d new figs (%d total), %d new cards (%d total) (%dms)",
-        len(figs), len(ctx.turn.figs), len(cards), len(ctx.turn.cards), elapsed_ms,
+        "execute_python result: %d new figs (%d total), %d new cards (%d total), %d card_updates (%dms)",
+        len(figs), len(ctx.turn.figs), len(cards), len(ctx.turn.cards), len(card_updates), elapsed_ms,
     )
     if not figs and stdout:
         logger.debug("execute_python stdout (no figs): %.300s", stdout.strip())
-    return _format_output(result, figs, cards, stdout, total_figs=len(ctx.turn.figs))
+    # Warn if fig was used but cards were selected for modification
+    if figs and ctx.turn.selected_card_ids and not card_updates:
+        warning = (
+            "\n\n⚠️ WARNING: You used `fig` but dashboard cards are selected for modification. "
+            "The user wants to UPDATE existing cards, not create new charts. "
+            'Use `card_updates = {"<card_id>": fig}` instead of `fig = ...`. '
+            "Re-run the code with `card_updates`."
+        )
+        return _format_output(result, figs, cards, card_updates, stdout, total_figs=len(ctx.turn.figs)) + warning
+
+    return _format_output(result, figs, cards, card_updates, stdout, total_figs=len(ctx.turn.figs))
 
 
-def _format_output(result, figs, cards, stdout, total_figs=0) -> str:
+def _format_output(result, figs, cards, card_updates, stdout, total_figs=0) -> str:
     parts = []
 
     if len(figs) > 1:
@@ -116,6 +130,8 @@ def _format_output(result, figs, cards, stdout, total_figs=0) -> str:
         parts.append(json.dumps(result, ensure_ascii=False, default=str)[:RESULT_DICT_MAX_CHARS])
     elif result is not None:
         parts.append(str(result)[:RESULT_OTHER_MAX_CHARS])
+    elif card_updates:
+        parts.append(f"[{len(card_updates)} card update(s) proposed]")
     elif cards:
         parts.append(f"[{len(cards)} cards generated]")
     elif stdout.strip():

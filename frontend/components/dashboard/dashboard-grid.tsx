@@ -5,6 +5,7 @@ import { Responsive } from 'react-grid-layout/legacy'
 import { Trash2Icon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChartOutput } from '@/components/chat/chart-output'
+import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import type { DashboardCard } from '@/lib/domain-types'
 
 interface DashboardGridProps {
@@ -15,6 +16,8 @@ interface DashboardGridProps {
 export default function DashboardGrid({ dashboardCards, removeCard }: DashboardGridProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(1200)
+  const selectedCardIds = useDashboardStore((s) => s.selectedCardIds)
+  const toggleCardSelection = useDashboardStore((s) => s.toggleCardSelection)
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -52,13 +55,26 @@ export default function DashboardGrid({ dashboardCards, removeCard }: DashboardG
         rowHeight={30}
         draggableHandle=".drag-handle"
       >
-        {dashboardCards.map((card) => (
+        {dashboardCards.map((card) => {
+          const isSelected = selectedCardIds.includes(card.id)
+          return (
           <div
             key={card.id}
-            className="group flex flex-col overflow-hidden rounded-xl border border-border/50 bg-card shadow-sm transition-shadow hover:shadow-md"
+            className={`group flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow hover:shadow-md ${
+              isSelected ? 'border-primary ring-1 ring-primary/30' : 'border-border/50'
+            }`}
           >
             <div className="drag-handle flex cursor-move items-center justify-between border-b border-border/40 bg-muted/30 px-4 py-2 opacity-50 transition-opacity group-hover:opacity-100">
-              <h3 className="truncate font-medium text-foreground">{card.title}</h3>
+              <div className="flex items-center gap-2 min-w-0">
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => toggleCardSelection(card.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
+                />
+                <h3 className="truncate font-medium text-foreground">{card.title}</h3>
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
@@ -81,7 +97,8 @@ export default function DashboardGrid({ dashboardCards, removeCard }: DashboardG
               )}
             </div>
           </div>
-        ))}
+          )
+        })}
       </Responsive>
     </div>
   )

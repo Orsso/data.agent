@@ -9,7 +9,8 @@ from core.constants import DEFAULT_MODEL
 from core.models.sources import DataSource
 from core.project import Project
 from core.sandbox import SandboxManager
-from core.state import ColumnProfile, DataProfile
+from core.state import ColumnProfile, DashboardCard, DataProfile
+from db.repositories.dashboard_cards import DashboardCardRepository
 from db.repositories.sources import SourceRepository
 
 logger = logging.getLogger(__name__)
@@ -84,6 +85,8 @@ class ProjectManager:
 
             hydrated = []
             for row in rows:
+                if row.profile is None:
+                    continue
                 try:
                     profile = _reconstruct_profile(row.profile)
                     source = DataSource(
@@ -101,6 +104,20 @@ class ProjectManager:
 
             if hydrated:
                 logger.info("Hydrated %d source(s) [project=%s]: %s", len(hydrated), project_id, ", ".join(hydrated))
+
+        # Always reload dashboard cards from DB to stay in sync
+        card_rows = await DashboardCardRepository(db_session).list_by_project(uuid.UUID(project_id))
+        proj.dashboard_cards = [
+            DashboardCard(
+                id=str(row.id),
+                type=row.type,
+                title=row.title,
+                code=row.code,
+                value=row.value,
+                fig=row.fig,
+            )
+            for row in card_rows
+        ]
 
         if not proj.sources.is_empty:
             await self._sandbox.ensure_container(project_id)

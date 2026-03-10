@@ -1,24 +1,30 @@
 import logging
 import uuid
+from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from api.deps import get_project_manager, require_chat
 from api.models import (
+    CardProposalResponse,
     MessageHistoryItem,
     MessageRequest,
     MessageResumeRequest,
+    QuestionResponse,
     TodoItemResponse,
     ToolStepResponse,
+    card_response,
 )
 from api.sse import event_to_sse, stream_events
 from core.project_manager import ProjectManager
 from core.state import Answer
 from db import get_db, get_session_factory
 from db.repositories.chats import ChatRepository
+from db.repositories.dashboard_cards import DashboardCardRepository
 from db.repositories.messages import MessageRepository
 
 logger = logging.getLogger(__name__)
@@ -42,6 +48,7 @@ async def list_messages(
             id=str(r.id),
             role=r.role,
             content=r.content,
+            code=r.code,
             thinking=r.thinking,
             thinking_duration_s=r.thinking_duration_s,
             tool_steps=[
@@ -58,6 +65,12 @@ async def list_messages(
                 TodoItemResponse(id=t["id"], content=t["content"], status=t["status"])
                 for t in r.todos
             ] if r.todos else None,
+            proposals=[
+                CardProposalResponse(**p) for p in r.proposals
+            ] if r.proposals else None,
+            asked_questions=[
+                QuestionResponse(**q) for q in r.asked_questions
+            ] if r.asked_questions else None,
             created_at=r.created_at,
         )
         for r in rows
@@ -76,7 +89,7 @@ async def send_message(
     pm.get_or_load(project_id, model=project_row.model)
     await pm.hydrate(project_id, db)
     thread = pm.get_chat_thread(project_id, chat_id)
-    logger.info('Message [project=%s, chat=%s]: "%.80s"', project_id, chat_id, req.message)
+    logger.info('Message [project=%s, chat=%s, cards=%s]: "%.80s"', project_id, chat_id, req.selected_card_ids, req.message)
 
     msg_count_before = len(thread.chat.messages)
     event_gen = thread.run_chat(req.message, req.selected_card_ids)
@@ -97,6 +110,10 @@ async def resume_message(
     await pm.hydrate(project_id, db)
     thread = pm.get_chat_thread(project_id, chat_id)
     answers = [Answer(question=qid, answer=ans) for qid, ans in req.answers.items()]
+
+    # Clear pending questions in DB immediately so navigation won't restore stale questions
+    await ChatRepository(db).update_pending_questions(uuid.UUID(chat_id), None)
+    await db.commit()
 
     msg_count_before = len(thread.chat.messages)
     event_gen = thread.resume_chat(answers)
@@ -169,38 +186,18 @@ def _streaming_response_with_persistence(event_gen, thread, chat_id, msg_count_b
                     cid = uuid.UUID(chat_id)
                     base_ts = datetime.now(UTC)
                     for i, msg in enumerate(new_messages):
-                        figs_json = msg.figs if msg.figs else None
-                        tool_steps_json = (
-                            [
-                                {
-                                    "tool_name": s.tool_name,
-                                    "summary": s.summary,
-                                    "success": s.success,
-                                    "duration_ms": s.duration_ms,
-                                }
-                                for s in msg.tool_steps
-                            ]
-                            if msg.tool_steps
-                            else None
-                        )
-                        todos_json = (
-                            [
-                                {"id": t.id, "content": t.content, "status": t.status}
-                                for t in msg.todos
-                            ]
-                            if msg.todos
-                            else None
-                        )
                         await repo.create(
                             chat_id=cid,
                             role=msg.role,
                             content=msg.content,
                             code=msg.code,
-                            tool_steps=tool_steps_json,
-                            todos=todos_json,
+                            tool_steps=[asdict(s) for s in msg.tool_steps] if msg.tool_steps else None,
+                            todos=[asdict(t) for t in msg.todos] if msg.todos else None,
                             thinking=msg.thinking,
                             thinking_duration_s=msg.thinking_duration_s,
-                            figs=figs_json,
+                            figs=msg.figs if msg.figs else None,
+                            proposals=[asdict(p) for p in msg.proposals] if msg.proposals else None,
+                            asked_questions=[asdict(q) for q in msg.asked_questions] if msg.asked_questions else None,
                             created_at=base_ts + timedelta(microseconds=i),
                         )
                     await session.commit()
@@ -212,22 +209,95 @@ def _streaming_response_with_persistence(event_gen, thread, chat_id, msg_count_b
                 logger.error("Failed to persist messages [chat=%s]", chat_id, exc_info=True)
 
         pending_title = thread.consume_pending_title()
-        if pending_title:
+        pending_qs = thread.chat.pending_questions
+        if pending_title or pending_qs is not None:
             try:
                 factory = get_session_factory()
                 async with factory() as session:
-                    await ChatRepository(session).update_title(
-                        uuid.UUID(chat_id), pending_title
-                    )
+                    chat_repo = ChatRepository(session)
+                    cid_uuid = uuid.UUID(chat_id)
+                    if pending_title:
+                        await chat_repo.update_title(cid_uuid, pending_title)
+                        logger.info("Chat title persisted [chat=%s]: %s", chat_id, pending_title)
+                    questions_json = [asdict(q) for q in pending_qs] if pending_qs else None
+                    await chat_repo.update_pending_questions(cid_uuid, questions_json)
+                    if questions_json:
+                        logger.info("Pending questions persisted [chat=%s]", chat_id)
+                    else:
+                        logger.info("Pending questions cleared [chat=%s]", chat_id)
                     await session.commit()
-                    logger.info(
-                        "Chat title persisted [chat=%s]: %s", chat_id, pending_title
-                    )
             except Exception:
-                logger.error("Failed to persist chat title [chat=%s]", chat_id, exc_info=True)
+                logger.error("Failed to persist chat metadata [chat=%s]", chat_id, exc_info=True)
 
     return StreamingResponse(
         _wrapped(),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+async def _find_proposal(db: AsyncSession, chat_id: str, proposal_id: str):
+    msg_row = await MessageRepository(db).find_by_proposal(uuid.UUID(chat_id), proposal_id)
+    if not msg_row or not msg_row.proposals:
+        raise HTTPException(404, "Message or proposals not found")
+    for p in msg_row.proposals:
+        if p["proposal_id"] == proposal_id:
+            return msg_row, p
+    raise HTTPException(404, "Proposal not found")
+
+
+@router.post("/{message_id}/proposals/{proposal_id}/accept")
+async def accept_proposal(
+    project_id: str,
+    chat_id: str,
+    message_id: str,
+    proposal_id: str,
+    db: AsyncSession = Depends(get_db),
+    pm: ProjectManager = Depends(get_project_manager),
+):
+    await require_chat(project_id, chat_id, db)
+    msg_row, proposal = await _find_proposal(db, chat_id, proposal_id)
+
+    card_id = uuid.UUID(proposal["card_id"])
+    row = await DashboardCardRepository(db).update_card(
+        card_id,
+        fig=proposal.get("proposed_fig"),
+        code=proposal.get("proposed_code"),
+        value=proposal.get("proposed_value"),
+    )
+    if row is None:
+        raise HTTPException(404, "Card no longer exists")
+
+    proposal["status"] = "accepted"
+    flag_modified(msg_row, "proposals")
+    await db.commit()
+
+    # Update in-memory project state
+    project = pm.get_project(project_id)
+    if project:
+        for card in (project.dashboard_cards or []):
+            if card.id == str(card_id):
+                card.fig = row.fig
+                card.code = row.code
+                card.value = row.value
+                break
+
+    return {"accepted": True, "card": card_response(row)}
+
+
+@router.post("/{message_id}/proposals/{proposal_id}/reject")
+async def reject_proposal(
+    project_id: str,
+    chat_id: str,
+    message_id: str,
+    proposal_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    await require_chat(project_id, chat_id, db)
+    msg_row, proposal = await _find_proposal(db, chat_id, proposal_id)
+
+    proposal["status"] = "rejected"
+    flag_modified(msg_row, "proposals")
+    await db.commit()
+
+    return {"rejected": True}

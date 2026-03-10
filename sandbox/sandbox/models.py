@@ -13,6 +13,7 @@ class ExecuteResponse(BaseModel):
     figures: list[dict] = Field(default_factory=list)
     result: dict | list | str | int | float | bool | None = None
     cards: list[dict] = Field(default_factory=list)
+    card_updates: dict[str, dict] = Field(default_factory=dict)
     error: str | None = None
     duration_ms: float = 0.0
 

@@ -11,6 +11,7 @@ import time
 import traceback
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -25,7 +26,7 @@ class _ExecutionTimeout(Exception):
     pass
 
 
-def _sanitize(obj):
+def _sanitize(obj: Any) -> Any:
     """Recursively convert non-JSON-serializable types to plain Python."""
     if isinstance(obj, dict):
         return {k: _sanitize(v) for k, v in obj.items()}
@@ -51,11 +52,14 @@ class ExecutionResult:
     figures: list[dict] = field(default_factory=list)
     result: dict | list | str | int | float | bool | None = None
     cards: list[dict] = field(default_factory=list)
+    card_updates: dict[str, dict] = field(default_factory=dict)
     error: str | None = None
     duration_ms: float = 0.0
 
 
 class SandboxKernel:
+    _shell: Any
+
     def __init__(self) -> None:
         self._shell = InteractiveShell.instance()
         self._shell.colors = "NoColor"
@@ -95,8 +99,6 @@ class SandboxKernel:
         error: str | None = None
         timed_out = False
 
-        # Run execution in a sub-thread so we can enforce a timeout
-        # from this (worker) thread without needing the main thread.
         exec_result_holder: list = []
         exec_error_holder: list = []
 
@@ -119,7 +121,7 @@ class SandboxKernel:
             timed_out = True
             with contextlib.suppress(Exception):
                 ctypes.pythonapi.PyThreadState_SetAsyncExc(
-                    ctypes.c_ulong(thread.ident),
+                    ctypes.c_ulong(thread.ident or 0),
                     ctypes.py_object(_ExecutionTimeout),
                 )
             thread.join(timeout=2)
@@ -151,6 +153,7 @@ class SandboxKernel:
         figures: list[dict] = []
         result = None
         cards: list[dict] = []
+        card_updates: dict[str, dict] = {}
 
         if not timed_out:
             try:
@@ -174,12 +177,20 @@ class SandboxKernel:
                 if error is None:
                     error = f"Card extraction failed: {exc}"
 
+            try:
+                card_updates = self._extract_card_updates()
+            except Exception as exc:
+                stderr_buf.write(f"\n[sandbox] Failed to extract card_updates: {exc}\n")
+                if error is None:
+                    error = f"Card updates extraction failed: {exc}"
+
         return ExecutionResult(
             stdout=stdout_buf.getvalue(),
             stderr=stderr_buf.getvalue(),
             figures=figures,
             result=result,
             cards=cards,
+            card_updates=card_updates,
             error=error,
             duration_ms=duration_ms,
         )
@@ -237,3 +248,14 @@ class SandboxKernel:
         if not isinstance(cards, list):
             return []
         return [_sanitize(c) for c in cards if isinstance(c, dict)]
+
+    def _extract_card_updates(self) -> dict[str, dict]:
+        ns = self._shell.user_ns
+        raw = ns.pop("card_updates", None)
+        if raw is None or not isinstance(raw, dict):
+            return {}
+        sanitized = {}
+        for card_id, fig in raw.items():
+            if hasattr(fig, "to_json"):
+                sanitized[str(card_id)] = _sanitize(fig)
+        return sanitized

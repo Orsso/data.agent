@@ -52,11 +52,14 @@ export function useProjectChat(projectId: string, chatId: string) {
             case 'todo_update':
               s.setTodos(event.todos)
               break
+            case 'card_proposals':
+              s.setProposals(event.proposals)
+              break
             case 'chat_renamed':
               useChatsStore.getState().renameChat(event.chat_id, event.title)
               break
             case 'done':
-              s.finishStreaming(event.content, event.has_figures, event.figure_count, event.msg_id, event.error)
+              s.finishStreaming(event.content, event.has_figures, event.figure_count, event.msg_id, event.code, event.error)
               break
           }
         }
@@ -75,7 +78,7 @@ export function useProjectChat(projectId: string, chatId: string) {
   )
 
   const sendMessage = useCallback(
-    async (content: string) => {
+    async (content: string, selectedCardIds?: string[]) => {
       let actualChatId = resolvedChatIdRef.current
 
       // Virtual "new" chat — create the real chat first
@@ -89,7 +92,7 @@ export function useProjectChat(projectId: string, chatId: string) {
       }
 
       useChatStore.getState().addUserMessage(content)
-      const events = streamProjectChat(projectId, actualChatId, content)
+      const events = streamProjectChat(projectId, actualChatId, content, selectedCardIds)
       await processEvents(events)
     },
     [projectId, router, processEvents]

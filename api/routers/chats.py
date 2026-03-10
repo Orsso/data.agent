@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import require_chat, require_project
@@ -33,6 +33,12 @@ async def list_chats(project_id: str, db: AsyncSession = Depends(get_db)):
     return [chat_response(r) for r in rows]
 
 
+@router.get("/{chat_id}", response_model=ChatResponse)
+async def get_chat(project_id: str, chat_id: str, db: AsyncSession = Depends(get_db)):
+    _, chat_row = await require_chat(project_id, chat_id, db)
+    return chat_response(chat_row)
+
+
 @router.patch("/{chat_id}", response_model=ChatResponse)
 async def rename_chat(
     project_id: str,
@@ -42,6 +48,8 @@ async def rename_chat(
 ):
     _, chat_row = await require_chat(project_id, chat_id, db)
     updated = await ChatRepository(db).update_title(chat_row.id, req.title)
+    if updated is None:
+        raise HTTPException(404, "Chat not found")
     logger.info("Chat renamed: %s -> '%s' [project=%s]", chat_id, req.title, project_id)
     return chat_response(updated)
 

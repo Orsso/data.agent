@@ -26,6 +26,7 @@ export type SSEEvent =
   | AskQuestionEvent
   | ChatRenamedEvent
   | TodoUpdateEvent
+  | CardProposalsEvent
   | DoneEvent
 
 export interface ThinkingEvent {
@@ -81,6 +82,7 @@ export interface DoneEvent {
   has_figures: boolean
   figure_count: number
   msg_id: string
+  code?: string
   error?: string
 }
 
@@ -96,6 +98,25 @@ export interface Question {
   header: string
   options: Choice[]
   multi_select: boolean
+  selected_answer?: string | null
+}
+
+export interface CardProposal {
+  proposal_id: string
+  card_id: string
+  card_title: string
+  current_fig: Record<string, unknown> | null
+  current_code: string | null
+  current_value: string | null
+  proposed_fig: Record<string, unknown> | null
+  proposed_code: string | null
+  proposed_value: string | null
+  status: 'pending' | 'accepted' | 'rejected'
+}
+
+export interface CardProposalsEvent {
+  type: 'card_proposals'
+  proposals: CardProposal[]
 }
 
 export interface ProjectSource {
@@ -136,6 +157,7 @@ export interface ChatSummary {
   id: string
   project_id: string
   title: string | null
+  pending_questions?: Question[] | null
   created_at: string
   updated_at: string
 }

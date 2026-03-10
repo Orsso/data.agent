@@ -6,7 +6,7 @@ import type {
   StreamingMessage,
   ToolStep,
 } from '../domain-types'
-import type { Question, TodoItem } from '../api-types'
+import type { CardProposal, Question, TodoItem } from '../api-types'
 import type { MessageHistoryItem } from '../backend-client'
 
 interface ChatState {
@@ -23,14 +23,16 @@ interface ChatState {
   setActiveTool: (name: string, args: string) => void
   addToolResult: (step: ToolStep) => void
   setTodos: (todos: TodoItem[]) => void
+  setProposals: (proposals: CardProposal[]) => void
   appendContent: (chunk: string) => void
-  finishStreaming: (content: string, hasFigures: boolean, figureCount: number, msgId?: string, error?: string) => void
+  finishStreaming: (content: string, hasFigures: boolean, figureCount: number, msgId?: string, code?: string, error?: string) => void
   setPendingQuestions: (questions: Question[] | null) => void
 
   // messages
   addUserMessage: (content: string) => void
-  answerQuestions: (answerText: string) => void
+  answerQuestions: (answers: Record<string, string>) => void
   loadMessages: (items: MessageHistoryItem[]) => void
+  updateProposalStatus: (msgId: string, proposalId: string, status: 'accepted' | 'rejected') => void
 
   // reset
   reset: () => void
@@ -87,13 +89,19 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       : null,
   })),
 
+  setProposals: (proposals) => set((state) => ({
+    streamingMessage: state.streamingMessage
+      ? { ...state.streamingMessage, proposals }
+      : null,
+  })),
+
   appendContent: (chunk) => set((state) => ({
     streamingMessage: state.streamingMessage
       ? { ...state.streamingMessage, content: state.streamingMessage.content + chunk }
       : null,
   })),
 
-  finishStreaming: (content, hasFigures, figureCount, msgId, error) => {
+  finishStreaming: (content, hasFigures, figureCount, msgId, code, error) => {
     const state = get()
     const streaming = state.streamingMessage
     if (!streaming) return
@@ -109,11 +117,14 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       backend_msg_id: msgId,
       role: 'assistant',
       content,
+      code: code ?? undefined,
       cot_entries: entries,
       thinking_duration_s: thinkingDurationS,
       todos: streaming.todos,
       has_figures: hasFigures,
       figure_count: figureCount,
+      proposals: streaming.proposals,
+      asked_questions: state.pendingQuestions ?? undefined,
       is_error: !!error,
     }
 
@@ -140,50 +151,27 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     ],
   })),
 
-  answerQuestions: (answerText) => {
+  answerQuestions: (answers: Record<string, string>) => {
     const state = get()
-    const questions = state.pendingQuestions
-    if (!questions) return
+    const messages = [...state.messages]
 
-    let messages = [...state.messages]
-    const streaming = state.streamingMessage
-
-    if (streaming) {
-      const hadEntries = streaming.cot_entries.length > 0
-      messages.push({
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: streaming.content || '',
-        cot_entries: streaming.cot_entries,
-        thinking_duration_s: hadEntries
-          ? (Date.now() - streaming.started_at) / 1000
-          : undefined,
-        asked_questions: questions,
-        has_figures: false,
-        figure_count: 0,
-      })
-    } else {
-      for (let i = messages.length - 1; i >= 0; i--) {
-        if (messages[i].role === 'assistant') {
-          messages[i] = { ...messages[i], asked_questions: questions }
-          break
+    // Find the last assistant message with asked_questions and set selected_answer
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i]
+      if (msg.role === 'assistant' && msg.asked_questions) {
+        messages[i] = {
+          ...msg,
+          asked_questions: msg.asked_questions.map((q) =>
+            answers[q.question] ? { ...q, selected_answer: answers[q.question] } : q
+          ),
         }
+        break
       }
     }
-
-    messages.push({
-      id: crypto.randomUUID(),
-      role: 'user',
-      content: answerText,
-      cot_entries: [],
-      has_figures: false,
-      figure_count: 0,
-    })
 
     set({
       messages,
       pendingQuestions: null,
-      streamingMessage: null,
     })
   },
 
@@ -212,14 +200,29 @@ export const useChatStore = create<ChatState>()((set, get) => ({
         backend_msg_id: item.id,
         role: item.role as 'user' | 'assistant',
         content: item.content,
+        code: item.code ?? undefined,
         cot_entries: entries,
         thinking_duration_s: item.thinking_duration_s ?? undefined,
         todos: item.todos ?? undefined,
         has_figures: item.figure_count > 0,
         figure_count: item.figure_count,
+        proposals: item.proposals ?? undefined,
+        asked_questions: item.asked_questions ?? undefined,
       }
     }),
   }),
+
+  updateProposalStatus: (msgId, proposalId, status) => set((state) => ({
+    messages: state.messages.map((msg) => {
+      if (msg.backend_msg_id !== msgId || !msg.proposals) return msg
+      return {
+        ...msg,
+        proposals: msg.proposals.map((p) =>
+          p.proposal_id === proposalId ? { ...p, status } : p
+        ),
+      }
+    }),
+  })),
 
   reset: () => set(initialState),
 }))

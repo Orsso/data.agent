@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Literal
 
-from core.state import LoopResult, Question, TodoItem
+from core.state import CardProposal, LoopResult, Question, TodoItem
 
 
 @dataclass
@@ -48,6 +48,11 @@ class ChatRenamedEvent:
 @dataclass
 class TodoUpdateEvent:
     todos: list[TodoItem]
+
+
+@dataclass
+class CardProposalsEvent:
+    proposals: list[CardProposal]
 
 
 @dataclass

@@ -7,6 +7,7 @@ from typing import Any
 
 from core.events import (
     AskQuestionEvent,
+    CardProposalsEvent,
     ChatRenamedEvent,
     DoneEvent,
     PipelineEvent,
@@ -62,6 +63,8 @@ def _event_to_data(event) -> dict:
         return {"type": "chat_renamed", "chat_id": event.chat_id, "title": event.title}
     if isinstance(event, TodoUpdateEvent):
         return {"type": "todo_update", "todos": _serialize(event.todos)}
+    if isinstance(event, CardProposalsEvent):
+        return {"type": "card_proposals", "proposals": _serialize(event.proposals)}
     if isinstance(event, DoneEvent):
         loop = event.loop_result
         d: dict = {
@@ -72,6 +75,8 @@ def _event_to_data(event) -> dict:
             "figure_count": len(loop.figs),
             "msg_id": event.msg_id,
         }
+        if loop.code:
+            d["code"] = loop.code
         if loop.error:
             d["error"] = loop.error
         return d

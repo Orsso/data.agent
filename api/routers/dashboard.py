@@ -5,7 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import require_project
-from api.models import AddDashboardCardRequest, DashboardCardResponse, card_response
+from api.models import (
+    AddDashboardCardRequest,
+    DashboardCardResponse,
+    UpdateDashboardCardRequest,
+    card_response,
+)
 from db import get_db
 from db.repositories.dashboard_cards import DashboardCardRepository
 
@@ -44,6 +49,27 @@ async def add_dashboard_card(
         fig=req.fig,
     )
     logger.info("Dashboard card added [project=%s]: %s", project_id, row.id)
+    return card_response(row)
+
+
+@router.patch("/{card_id}", response_model=DashboardCardResponse)
+async def update_dashboard_card(
+    project_id: str,
+    card_id: str,
+    req: UpdateDashboardCardRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    await require_project(project_id, db)
+    try:
+        cid = uuid.UUID(card_id)
+    except ValueError as exc:
+        raise HTTPException(400, "Invalid card ID") from exc
+    row = await DashboardCardRepository(db).update_card(
+        cid, code=req.code, value=req.value, fig=req.fig
+    )
+    if not row:
+        raise HTTPException(404, "Dashboard card not found")
+    await db.commit()
     return card_response(row)
 
 

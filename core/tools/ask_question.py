@@ -21,17 +21,20 @@ class QuestionSchema(BaseModel):
 
 @tool
 def ask_question(questions: list[QuestionSchema]) -> str:
-    """Ask the user a clarifying question with interactive buttons.
+    """Ask the user clarifying questions with interactive buttons.
     MUST use this instead of asking in plain text, the UI only renders buttons via this tool.
 
+    You can pass multiple questions in the `questions` list when several dimensions
+    need clarification. The user answers all questions before execution resumes.
+
     USE WHEN:
-    - The query is ambiguous (e.g., 'compare' could mean chart, table, or statistical test).
+    - The query is open-ended or has unclear dimensions (metric, grouping, time range, chart type).
     - Multiple valid analysis approaches exist (e.g., 'trends' could be by month, quarter, or year).
     - You want to confirm before an expensive operation.
 
     DO NOT USE WHEN:
-    - The intent is reasonably clear. Prefer action over clarification.
-    - The question has an obvious best answer. Just do it.
+    - The intent is clear on all dimensions. Just do it.
+    - The question has an obvious best answer.
 
     Write option labels in the USER'S LANGUAGE. Keep labels short (1-5 words).
     """

@@ -11,9 +11,10 @@ interface MessageFiguresProps {
   chatId: string
   messageId: string
   figureCount: number
+  code?: string
 }
 
-export function MessageFigures({ projectId, chatId, messageId, figureCount }: MessageFiguresProps) {
+export function MessageFigures({ projectId, chatId, messageId, figureCount, code }: MessageFiguresProps) {
   const [figures, setFigures] = useState<PlotlyFigure[]>([])
   const [loaded, setLoaded] = useState(false)
 
@@ -60,7 +61,7 @@ export function MessageFigures({ projectId, chatId, messageId, figureCount }: Me
   return (
     <div className="mt-4 flex w-full flex-col gap-4">
       {figures.map((fig, i) => (
-        <ChartOutput key={i} figure={fig} />
+        <ChartOutput key={i} figure={fig} code={code} />
       ))}
     </div>
   )

@@ -69,7 +69,7 @@ async def run_project_pipeline(
                     cards = proj.dashboard_cards
                     if cards:
                         card_repo = DashboardCardRepository(session)
-                        await card_repo.replace_all(
+                        db_rows = await card_repo.replace_all(
                             pid,
                             [
                                 {
@@ -83,6 +83,9 @@ async def run_project_pipeline(
                                 for i, c in enumerate(cards)
                             ],
                         )
+                        # Update in-memory IDs to match DB UUIDs
+                        for card, row in zip(cards, db_rows, strict=True):
+                            card.id = str(row.id)
                         logger.info(
                             "Dashboard cards persisted [project=%s]: %d cards",
                             project_id, len(cards),
