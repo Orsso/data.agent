@@ -1,0 +1,11 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "exclude": [
+    "sandbox",
+    "frontend",
+    ".venv",
+    "**/node_modules",
+    "**/__pycache__"
+  ]
+}

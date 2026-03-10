@@ -17,7 +17,7 @@ _FORMAT_HINTS = {
 
 
 def build_profile(df: pd.DataFrame) -> DataProfile:
-    columns = [_profile_column(df[col]) for col in df.columns]
+    columns = [_profile_column(df[col]) for col in df.columns]  # type: ignore[arg-type]
     return DataProfile(row_count=len(df), columns=columns)
 
 
@@ -48,7 +48,7 @@ def _profile_column(series: pd.Series) -> ColumnProfile:
     sample_values = [str(v) for v in top_values]
     fmt = _detect_format(series)
     return ColumnProfile(
-        name=series.name,
+        name=str(series.name),
         dtype=dtype,
         format=fmt,
         nulls_pct=nulls_pct,
@@ -79,7 +79,7 @@ def _detect_format(series: pd.Series) -> str | None:
         return "pipe_separated"
 
     coerced = pd.to_numeric(sample, errors="coerce")
-    if coerced.notna().sum() / n > 0.8:
+    if coerced.notna().sum() / n > 0.8:  # type: ignore[union-attr]
         return "numeric_string"
 
     parsed = pd.to_datetime(sample, errors="coerce", format="mixed")

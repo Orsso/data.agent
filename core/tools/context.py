@@ -18,4 +18,4 @@ class ToolContext:
 
 
 def get_tool_context(config: RunnableConfig) -> ToolContext:
-    return config["configurable"]["tool_context"]
+    return config["configurable"]["tool_context"]  # type: ignore[typeddict-item]

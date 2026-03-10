@@ -10,7 +10,7 @@ from core.tools.exceptions import ToolError
 logger = logging.getLogger(__name__)
 
 
-@wrap_tool_call
+@wrap_tool_call  # type: ignore[arg-type]
 async def tool_error_handler(request, handler):
     try:
         return await handler(request)

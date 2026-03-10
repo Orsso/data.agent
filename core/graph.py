@@ -42,7 +42,7 @@ def build_chat_graph(
         model=llm,
         tools=ALL_TOOLS,
         system_prompt=system_prompt or build_chat_system(),
-        middleware=[tool_error_handler, SummarizationMiddleware(llm)],
+        middleware=[tool_error_handler, SummarizationMiddleware(llm)],  # type: ignore[arg-type]
         checkpointer=checkpointer,
     )
 
@@ -58,5 +58,5 @@ def build_pipeline_graph(model_name: str, api_key: str, system_prompt: str):
         model=llm,
         tools=PIPELINE_TOOLS,
         system_prompt=system_prompt,
-        middleware=[tool_error_handler],
+        middleware=[tool_error_handler],  # type: ignore[arg-type]
     )

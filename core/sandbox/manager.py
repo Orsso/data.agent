@@ -54,6 +54,16 @@ class SandboxManager:
         self._project_locks: dict[str, asyncio.Lock] = {}
         self._use_network: bool = False  # True when backend is in Docker
 
+    @property
+    def _client(self) -> docker.DockerClient:
+        assert self._docker is not None, "SandboxManager not started"
+        return self._docker
+
+    @property
+    def _api(self) -> httpx.AsyncClient:
+        assert self._http is not None, "SandboxManager not started"
+        return self._http
+
     def _get_project_lock(self, project_id: str) -> asyncio.Lock:
         return self._project_locks.setdefault(project_id, asyncio.Lock())
 
@@ -92,17 +102,17 @@ class SandboxManager:
     def create_volume(self, project_id: str) -> str:
         vol_name = self._volume_name(project_id)
         try:
-            self._docker.volumes.get(vol_name)
+            self._client.volumes.get(vol_name)
             logger.debug("Volume %s already exists", vol_name)
         except docker.errors.NotFound:
-            self._docker.volumes.create(vol_name)
+            self._client.volumes.create(vol_name)
             logger.info("Created volume %s", vol_name)
         return vol_name
 
     def delete_volume(self, project_id: str) -> None:
         vol_name = self._volume_name(project_id)
         try:
-            vol = self._docker.volumes.get(vol_name)
+            vol = self._client.volumes.get(vol_name)
         except docker.errors.NotFound:
             logger.debug("Volume %s not found (already deleted)", vol_name)
             return
@@ -148,7 +158,7 @@ class SandboxManager:
 
         t_docker = time.monotonic()
         container = await loop.run_in_executor(
-            None, lambda: self._docker.containers.run(**run_kwargs)
+            None, lambda: self._client.containers.run(**run_kwargs)
         )
         logger.info(
             "Docker container started for %s (%dms)",
@@ -251,7 +261,7 @@ class SandboxManager:
         handle.last_used_at = time.monotonic()
 
         try:
-            resp = await self._http.post(
+            resp = await self._api.post(
                 f"{handle.base_url}/execute",
                 json={"code": code, "timeout_seconds": timeout or self.EXECUTE_TIMEOUT_S},
             )
@@ -273,7 +283,7 @@ class SandboxManager:
         buf = io.BytesIO(data)
 
         try:
-            resp = await self._http.post(
+            resp = await self._api.post(
                 f"{handle.base_url}/upload",
                 params={"name": name},
                 files={"file": ("data.parquet", buf, "application/octet-stream")},
@@ -295,7 +305,7 @@ class SandboxManager:
         handle.last_used_at = time.monotonic()
 
         try:
-            resp = await self._http.delete(f"{handle.base_url}/sources/{name}")
+            resp = await self._api.delete(f"{handle.base_url}/sources/{name}")
             resp.raise_for_status()
         except httpx.HTTPError as exc:
             raise SandboxError(f"Remove source '{name}' failed: {exc}") from exc
@@ -303,14 +313,14 @@ class SandboxManager:
     def _ensure_network(self) -> None:
         """Create the sandbox-net Docker network if it doesn't exist."""
         try:
-            self._docker.networks.get(SANDBOX_NETWORK)
+            self._client.networks.get(SANDBOX_NETWORK)
         except docker.errors.NotFound:
-            self._docker.networks.create(SANDBOX_NETWORK, internal=True)
+            self._client.networks.create(SANDBOX_NETWORK, internal=True)
             logger.info("Created Docker network %s", SANDBOX_NETWORK)
 
     def _reap_orphaned_containers(self) -> None:
         """Remove sandbox containers left over from a previous backend run."""
-        orphans = self._docker.containers.list(
+        orphans = self._client.containers.list(
             all=True, filters={"label": [f"{k}={v}" for k, v in _SANDBOX_LABEL.items()]},
         )
         if not orphans:
@@ -333,7 +343,7 @@ class SandboxManager:
         while time.monotonic() < deadline:
             attempt += 1
             try:
-                resp = await self._http.get(f"{handle.base_url}/health")
+                resp = await self._api.get(f"{handle.base_url}/health")
                 if resp.status_code == 200:
                     elapsed = (time.monotonic() - t0) * 1000
                     logger.info("Health check passed for %s (%dms)", handle.project_id, int(elapsed))

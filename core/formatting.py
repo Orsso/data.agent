@@ -1,5 +1,6 @@
 import json
 import re
+from typing import Any
 
 from core.state import LoopResult
 
@@ -7,7 +8,7 @@ MAX_SUMMARY_LINE = 80
 MAX_SUMMARY_LENGTH = 100
 
 
-def serialize_figure(fig: dict | None) -> dict | None:
+def serialize_figure(fig: Any) -> dict | None:
     if fig is None:
         return None
     if hasattr(fig, "to_json"):
