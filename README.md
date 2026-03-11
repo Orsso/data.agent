@@ -2,33 +2,48 @@
 
 WIP - AI data analysis agent.
 
-```mermaid
-graph LR
-    subgraph Frontend[":3000"]
-        Next["Next.js 16<br/>React 18<br/>Tailwind"]
-    end
+## Setup
 
-    subgraph Backend[":8000"]
-        API["FastAPI<br/>LangGraph Agent<br/>Gemini LLM"]
-    end
-
-    subgraph Sandbox[":8080 per project"]
-        Kernel["IPython kernel<br/>Pandas + Plotly"]
-        Vol[("sandbox-data-{id}")]
-        Kernel --- Vol
-    end
-
-    DB[(PostgreSQL)]
-
-    Next -->|"api"| API
-    API -->|"SSE stream"| Next
-    API --- DB
-    API -->|"upload parquet"| Vol
-    API -->|"execute_python"| Kernel
-    API -->|"docker.sock"| Sandbox
+```bash
+cp .env.example .env   # add your GOOGLE_API_KEY
+docker compose up --build
 ```
 
-## Database Schema
+Rebuild sandbox after pulling: `docker compose build sandbox-image`
+
+Open http://localhost:3000.
+
+<p align="center">
+  <img src="docs/architecture.png" alt="Architecture" width="900">
+</p>
+
+## Architecture
+
+```mermaid
+graph LR
+    subgraph "frontend/ · :3000"
+        Next["Next.js 16 · React 18 · Tailwind"]
+    end
+
+    subgraph "api/ + core/ · :8000"
+        Backend["FastAPI · LangGraph · Gemini"]
+    end
+
+    subgraph "sandbox/ · :8080 per project"
+        Kernel["IPython kernel · Pandas · Plotly"]
+    end
+
+    subgraph "db/ · :5432"
+        DB[("PostgreSQL 16")]
+    end
+
+    Next -- "REST + SSE" --> Backend
+    Backend --- DB
+    Backend -- "execute_python" --> Kernel
+    Backend -. "docker.sock" .-> Kernel
+```
+
+## MCD
 
 ```mermaid
 erDiagram
@@ -96,11 +111,3 @@ erDiagram
     }
 ```
 
-## Setup
-
-```bash
-cp .env.example .env   # add your GOOGLE_API_KEY
-docker compose up --build
-```
-
-Open http://localhost:3000.
