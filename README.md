@@ -1,6 +1,6 @@
 # data.agent
 
-WIP - AI data analysis agent.
+WIP - Agentic analytics assistant
 
 ## Setup
 
@@ -10,8 +10,9 @@ docker compose up --build
 ```
 
 Rebuild sandbox after pulling: `docker compose build sandbox-image`
-
 Open http://localhost:3000.
+
+## Overview 
 
 <p align="center">
   <img src="docs/architecture.png" alt="Architecture" width="900">
@@ -43,7 +44,7 @@ graph LR
     Backend -. "docker.sock" .-> Kernel
 ```
 
-## MCD
+## CDM
 
 ```mermaid
 erDiagram
