@@ -12,6 +12,12 @@
  * Content component would replace the entire group, losing Root/Trigger/etc.
  * So we must provide every component in each overridden group.
  *
+ * Portal caveat: when content is portaled to document.body, it leaves the
+ * `.bn-container` / `.bn-shadcn` ancestor scope. CSS custom properties
+ * (--bn-colors-*, --bn-border, etc.) and descendant selectors
+ * (.bn-container .bn-color-icon) no longer apply. BNPortalScope re-establishes
+ * that context with a layout-neutral `display:contents` wrapper.
+ *
  * The `bn-*` class names come from @blocknote/shadcn/style.css (already loaded).
  * Non-Content components are copied verbatim from BlockNote's source.
  * Content components are identical but with Portal wrappers re-enabled.
@@ -24,6 +30,19 @@ import * as SelectPrimitive from '@radix-ui/react-select'
 import { Check, ChevronDown, ChevronRight, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+/**
+ * Restores BlockNote's CSS variable scope for portaled content.
+ * Portals render into document.body, escaping the `.bn-container` /
+ * `.bn-shadcn` ancestors where --bn-colors-*, --bn-border, and descendant
+ * selectors like `.bn-container .bn-color-icon` are defined.
+ * `display:contents` keeps this wrapper layout-neutral.
+ */
+const BNPortalScope: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="bn-container bn-shadcn" style={{ display: 'contents' }}>
+    {children}
+  </div>
+)
+
 // ─── Popover ────────────────────────────────────────────────────────────────
 
 const Popover = PopoverPrimitive.Root
@@ -34,16 +53,18 @@ const PopoverContent = forwardRef<
   React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
 >(({ className, align = 'center', sideOffset = 4, ...props }, ref) => (
   <PopoverPrimitive.Portal>
-    <PopoverPrimitive.Content
-      ref={ref}
-      align={align}
-      sideOffset={sideOffset}
-      className={cn(
-        'bn-z-50 bn-w-72 bn-rounded-md bn-border bn-bg-popover bn-p-4 bn-text-popover-foreground bn-shadow-md bn-outline-none data-[state=open]:bn-animate-in data-[state=closed]:bn-animate-out data-[state=closed]:bn-fade-out-0 data-[state=open]:bn-fade-in-0 data-[state=closed]:bn-zoom-out-95 data-[state=open]:bn-zoom-in-95 data-[side=bottom]:bn-slide-in-from-top-2 data-[side=left]:bn-slide-in-from-right-2 data-[side=right]:bn-slide-in-from-left-2 data-[side=top]:bn-slide-in-from-bottom-2',
-        className,
-      )}
-      {...props}
-    />
+    <BNPortalScope>
+      <PopoverPrimitive.Content
+        ref={ref}
+        align={align}
+        sideOffset={sideOffset}
+        className={cn(
+          'bn-z-50 bn-w-72 bn-rounded-md bn-border bn-bg-popover bn-p-4 bn-text-popover-foreground bn-shadow-md bn-outline-none data-[state=open]:bn-animate-in data-[state=closed]:bn-animate-out data-[state=closed]:bn-fade-out-0 data-[state=open]:bn-fade-in-0 data-[state=closed]:bn-zoom-out-95 data-[state=open]:bn-zoom-in-95 data-[side=bottom]:bn-slide-in-from-top-2 data-[side=left]:bn-slide-in-from-right-2 data-[side=right]:bn-slide-in-from-left-2 data-[side=top]:bn-slide-in-from-bottom-2',
+          className,
+        )}
+        {...props}
+      />
+    </BNPortalScope>
   </PopoverPrimitive.Portal>
 ))
 PopoverContent.displayName = 'PopoverContent'
@@ -78,14 +99,16 @@ const DropdownMenuSubContent = forwardRef<
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent>
 >(({ className, ...props }, ref) => (
   <DropdownMenuPrimitive.Portal>
-    <DropdownMenuPrimitive.SubContent
-      ref={ref}
-      className={cn(
-        'bn-z-50 bn-min-w-[8rem] bn-overflow-hidden bn-rounded-md bn-border bn-bg-popover bn-p-1 bn-text-popover-foreground bn-shadow-lg data-[state=open]:bn-animate-in data-[state=closed]:bn-animate-out data-[state=closed]:bn-fade-out-0 data-[state=open]:bn-fade-in-0 data-[state=closed]:bn-zoom-out-95 data-[state=open]:bn-zoom-in-95 data-[side=bottom]:bn-slide-in-from-top-2 data-[side=left]:bn-slide-in-from-right-2 data-[side=right]:bn-slide-in-from-left-2 data-[side=top]:bn-slide-in-from-bottom-2',
-        className,
-      )}
-      {...props}
-    />
+    <BNPortalScope>
+      <DropdownMenuPrimitive.SubContent
+        ref={ref}
+        className={cn(
+          'bn-z-50 bn-min-w-[8rem] bn-overflow-hidden bn-rounded-md bn-border bn-bg-popover bn-p-1 bn-text-popover-foreground bn-shadow-lg data-[state=open]:bn-animate-in data-[state=closed]:bn-animate-out data-[state=closed]:bn-fade-out-0 data-[state=open]:bn-fade-in-0 data-[state=closed]:bn-zoom-out-95 data-[state=open]:bn-zoom-in-95 data-[side=bottom]:bn-slide-in-from-top-2 data-[side=left]:bn-slide-in-from-right-2 data-[side=right]:bn-slide-in-from-left-2 data-[side=top]:bn-slide-in-from-bottom-2',
+          className,
+        )}
+        {...props}
+      />
+    </BNPortalScope>
   </DropdownMenuPrimitive.Portal>
 ))
 DropdownMenuSubContent.displayName = 'DropdownMenuSubContent'
@@ -95,15 +118,17 @@ const DropdownMenuContent = forwardRef<
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
 >(({ className, sideOffset = 4, ...props }, ref) => (
   <DropdownMenuPrimitive.Portal>
-    <DropdownMenuPrimitive.Content
-      ref={ref}
-      sideOffset={sideOffset}
-      className={cn(
-        'bn-z-50 bn-min-w-[8rem] bn-overflow-hidden bn-rounded-md bn-border bn-bg-popover bn-p-1 bn-text-popover-foreground bn-shadow-md data-[state=open]:bn-animate-in data-[state=closed]:bn-animate-out data-[state=closed]:bn-fade-out-0 data-[state=open]:bn-fade-in-0 data-[state=closed]:bn-zoom-out-95 data-[state=open]:bn-zoom-in-95 data-[side=bottom]:bn-slide-in-from-top-2 data-[side=left]:bn-slide-in-from-right-2 data-[side=right]:bn-slide-in-from-left-2 data-[side=top]:bn-slide-in-from-bottom-2',
-        className,
-      )}
-      {...props}
-    />
+    <BNPortalScope>
+      <DropdownMenuPrimitive.Content
+        ref={ref}
+        sideOffset={sideOffset}
+        className={cn(
+          'bn-z-50 bn-min-w-[8rem] bn-overflow-hidden bn-rounded-md bn-border bn-bg-popover bn-p-1 bn-text-popover-foreground bn-shadow-md data-[state=open]:bn-animate-in data-[state=closed]:bn-animate-out data-[state=closed]:bn-fade-out-0 data-[state=open]:bn-fade-in-0 data-[state=closed]:bn-zoom-out-95 data-[state=open]:bn-zoom-in-95 data-[side=bottom]:bn-slide-in-from-top-2 data-[side=left]:bn-slide-in-from-right-2 data-[side=right]:bn-slide-in-from-left-2 data-[side=top]:bn-slide-in-from-bottom-2',
+          className,
+        )}
+        {...props}
+      />
+    </BNPortalScope>
   </DropdownMenuPrimitive.Portal>
 ))
 DropdownMenuContent.displayName = 'DropdownMenuContent'
@@ -233,29 +258,31 @@ const SelectContent = forwardRef<
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
 >(({ className, children, position = 'popper', ...props }, ref) => (
   <SelectPrimitive.Portal>
-    <SelectPrimitive.Content
-      ref={ref}
-      className={cn(
-        'bn-relative bn-z-50 bn-max-h-96 bn-min-w-[8rem] bn-overflow-hidden bn-rounded-md bn-border bn-bg-popover bn-text-popover-foreground bn-shadow-md data-[state=open]:bn-animate-in data-[state=closed]:bn-animate-out data-[state=closed]:bn-fade-out-0 data-[state=open]:bn-fade-in-0 data-[state=closed]:bn-zoom-out-95 data-[state=open]:bn-zoom-in-95 data-[side=bottom]:bn-slide-in-from-top-2 data-[side=left]:bn-slide-in-from-right-2 data-[side=right]:bn-slide-in-from-left-2 data-[side=top]:bn-slide-in-from-bottom-2',
-        position === 'popper' &&
-          'data-[side=bottom]:bn-translate-y-1 data-[side=left]:bn--translate-x-1 data-[side=right]:bn-translate-x-1 data-[side=top]:bn--translate-y-1',
-        className,
-      )}
-      position={position}
-      {...props}
-    >
-      <SelectScrollUpButton />
-      <SelectPrimitive.Viewport
+    <BNPortalScope>
+      <SelectPrimitive.Content
+        ref={ref}
         className={cn(
-          'bn-p-1',
+          'bn-relative bn-z-50 bn-max-h-96 bn-min-w-[8rem] bn-overflow-hidden bn-rounded-md bn-border bn-bg-popover bn-text-popover-foreground bn-shadow-md data-[state=open]:bn-animate-in data-[state=closed]:bn-animate-out data-[state=closed]:bn-fade-out-0 data-[state=open]:bn-fade-in-0 data-[state=closed]:bn-zoom-out-95 data-[state=open]:bn-zoom-in-95 data-[side=bottom]:bn-slide-in-from-top-2 data-[side=left]:bn-slide-in-from-right-2 data-[side=right]:bn-slide-in-from-left-2 data-[side=top]:bn-slide-in-from-bottom-2',
           position === 'popper' &&
-            'bn-h-[var(--radix-select-trigger-height)] bn-w-full bn-min-w-[var(--radix-select-trigger-width)]',
+            'data-[side=bottom]:bn-translate-y-1 data-[side=left]:bn--translate-x-1 data-[side=right]:bn-translate-x-1 data-[side=top]:bn--translate-y-1',
+          className,
         )}
+        position={position}
+        {...props}
       >
-        {children}
-      </SelectPrimitive.Viewport>
-      <SelectScrollDownButton />
-    </SelectPrimitive.Content>
+        <SelectScrollUpButton />
+        <SelectPrimitive.Viewport
+          className={cn(
+            'bn-p-1',
+            position === 'popper' &&
+              'bn-h-[var(--radix-select-trigger-height)] bn-w-full bn-min-w-[var(--radix-select-trigger-width)]',
+          )}
+        >
+          {children}
+        </SelectPrimitive.Viewport>
+        <SelectScrollDownButton />
+      </SelectPrimitive.Content>
+    </BNPortalScope>
   </SelectPrimitive.Portal>
 ))
 SelectContent.displayName = 'SelectContent'
