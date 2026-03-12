@@ -169,5 +169,7 @@ export interface ProjectDashboardCard {
   code: string | null
   value: string | null
   fig: Record<string, unknown> | null
+  content: unknown[] | null
+  layout: { x: number; y: number; w: number; h: number } | null
   position: number
 }

@@ -174,6 +174,8 @@ class DashboardCardResponse(BaseModel):
     code: str | None
     value: str | None
     fig: dict | None
+    content: list | None
+    layout: dict | None
     position: int
 
 
@@ -185,14 +187,19 @@ def card_response(row: DashboardCardRow) -> DashboardCardResponse:
         code=row.code,
         value=row.value,
         fig=row.fig,
+        content=row.content,
+        layout=row.layout,
         position=row.position,
     )
 
 
 class UpdateDashboardCardRequest(BaseModel):
+    title: str | None = None
     code: str | None = None
     value: str | None = None
     fig: dict | None = None
+    content: list | None = None
+    layout: dict | None = None
 
 
 class AddDashboardCardRequest(BaseModel):
@@ -201,3 +208,11 @@ class AddDashboardCardRequest(BaseModel):
     code: str | None = None
     value: str | None = None
     fig: dict | None = None
+
+
+class UpdateLayoutsRequest(BaseModel):
+    items: list[dict]
+
+
+class SaveDashboardContentRequest(BaseModel):
+    content: list

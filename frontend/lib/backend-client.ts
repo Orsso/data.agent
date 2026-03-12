@@ -289,6 +289,47 @@ export async function addDashboardCard(
   return res.json()
 }
 
+export async function getDashboardContent(projectId: string): Promise<unknown[] | null> {
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/dashboard-content`)
+  if (!res.ok) throw new Error('Failed to fetch dashboard content')
+  return res.json()
+}
+
+export async function saveDashboardContent(projectId: string, content: unknown[]): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/dashboard-content`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  })
+  if (!res.ok) throw new Error(await readErrorMessage(res, 'Failed to save dashboard content'))
+}
+
+export async function updateDashboardCard(
+  projectId: string,
+  cardId: string,
+  updates: { title?: string; content?: unknown[] | null },
+): Promise<ProjectDashboardCard> {
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/dashboard-cards/${cardId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  })
+  if (!res.ok) throw new Error(await readErrorMessage(res, 'Failed to update dashboard card'))
+  return res.json()
+}
+
+export async function updateDashboardLayouts(
+  projectId: string,
+  items: { id: string; layout: { x: number; y: number; w: number; h: number } }[],
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/dashboard-cards/layouts`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items }),
+  })
+  if (!res.ok) throw new Error(await readErrorMessage(res, 'Failed to update layouts'))
+}
+
 export async function removeDashboardCard(projectId: string, cardId: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/projects/${projectId}/dashboard-cards/${cardId}`, {
     method: 'DELETE',

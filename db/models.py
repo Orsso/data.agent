@@ -25,6 +25,7 @@ class ProjectRow(Base):
         String(100), nullable=False, default=DEFAULT_MODEL
     )
     suggested_questions: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    dashboard_content: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -138,6 +139,8 @@ class DashboardCardRow(Base):
     code: Mapped[str | None] = mapped_column(Text, nullable=True)
     value: Mapped[str | None] = mapped_column(Text, nullable=True)
     fig: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    content: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    layout: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     project: Mapped[ProjectRow] = relationship(back_populates="dashboard_cards")

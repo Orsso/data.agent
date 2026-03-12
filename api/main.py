@@ -16,6 +16,7 @@ for _name in ("httpx", "httpcore", "docker", "urllib3"):
 logger = logging.getLogger(__name__)
 
 from api.routers.chats import router as chats_router  # noqa: E402
+from api.routers.dashboard import content_router as dashboard_content_router  # noqa: E402
 from api.routers.dashboard import router as dashboard_router  # noqa: E402
 from api.routers.messages import router as messages_router  # noqa: E402
 from api.routers.pipelines import router as pipelines_router  # noqa: E402
@@ -85,3 +86,4 @@ app.include_router(messages_router)
 app.include_router(pipelines_router)
 app.include_router(sources_router)
 app.include_router(dashboard_router)
+app.include_router(dashboard_content_router)

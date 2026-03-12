@@ -73,23 +73,34 @@ class DashboardCardRepository:
     async def update_card(
         self,
         card_id: uuid.UUID,
-        code: str | None = None,
-        value: str | None = None,
-        fig: dict | None = None,
+        **kwargs,
     ) -> DashboardCardRow | None:
         stmt = select(DashboardCardRow).where(DashboardCardRow.id == card_id)
         result = await self._session.execute(stmt)
         row = result.scalar_one_or_none()
         if row is None:
             return None
-        if code is not None:
-            row.code = code
-        if value is not None:
-            row.value = value
-        if fig is not None:
-            row.fig = fig
+        for key in ("title", "code", "value", "fig", "content", "layout"):
+            if key in kwargs and kwargs[key] is not None:
+                setattr(row, key, kwargs[key])
         await self._session.flush()
         return row
+
+    async def update_layouts(
+        self, project_id: uuid.UUID, items: list[dict]
+    ) -> None:
+        """Batch-update layout positions for multiple cards."""
+        for item in items:
+            card_id = uuid.UUID(item["id"])
+            stmt = select(DashboardCardRow).where(
+                DashboardCardRow.id == card_id,
+                DashboardCardRow.project_id == project_id,
+            )
+            result = await self._session.execute(stmt)
+            row = result.scalar_one_or_none()
+            if row is not None:
+                row.layout = item.get("layout")
+        await self._session.flush()
 
     async def delete_card(self, card_id: uuid.UUID) -> bool:
         stmt = select(DashboardCardRow).where(DashboardCardRow.id == card_id)

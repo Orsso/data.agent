@@ -39,12 +39,22 @@ export interface StreamingMessage {
 }
 
 // dashboard
+
+export interface CardLayout {
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
 export interface DashboardCard {
   id: string
-  type: 'chart' | 'metric'
+  type: 'chart' | 'metric' | 'note'
   title: string
   code?: string
   value?: string
   fig?: PlotlyFigure | null
+  content?: unknown[] | null
+  layout?: CardLayout | null
   position: number
 }

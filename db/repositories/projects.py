@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload
 
 from db.models import ProjectRow
 
-_UPDATABLE = {"name", "description", "status", "model", "suggested_questions"}
+_UPDATABLE = {"name", "description", "status", "model", "suggested_questions", "dashboard_content"}
 
 
 class ProjectRepository:
@@ -51,6 +51,17 @@ class ProjectRepository:
                 setattr(row, key, value)
         await self._session.flush()
         return row
+
+    async def get_dashboard_content(self, project_id: uuid.UUID) -> list | None:
+        stmt = select(ProjectRow.dashboard_content).where(ProjectRow.id == project_id)
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def save_dashboard_content(self, project_id: uuid.UUID, content: list) -> None:
+        row = await self._session.get(ProjectRow, project_id)
+        if row is not None:
+            row.dashboard_content = content
+            await self._session.flush()
 
     async def delete(self, project_id: uuid.UUID) -> bool:
         row = await self.get(project_id)

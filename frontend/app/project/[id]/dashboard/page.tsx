@@ -5,12 +5,10 @@ import { useParams } from 'next/navigation'
 import { LayoutGridIcon, Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
-import 'react-grid-layout/css/styles.css'
-import 'react-resizable/css/styles.css'
 
 import { Button } from '@/components/ui/button'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
-import type { DashboardCard } from '@/lib/domain-types'
+import type { DashboardCard, CardLayout } from '@/lib/domain-types'
 
 const DashboardGrid = dynamic(
   () => import('@/components/dashboard/dashboard-grid'),
@@ -28,13 +26,14 @@ export default function ProjectDashboardPage() {
   )
   const loadCards = useDashboardStore((s) => s.loadCards)
   const removeCard = useDashboardStore((s) => s.removeCard)
+  const addNote = useDashboardStore((s) => s.addNote)
+  const saveLayouts = useDashboardStore((s) => s.saveLayouts)
+  const saveCardContent = useDashboardStore((s) => s.saveCardContent)
   const isGeneratingDashboard = useDashboardStore((s) => s.isGeneratingDashboard)
   const generateDashboard = useDashboardStore((s) => s.generateDashboard)
 
   useEffect(() => {
-    if (projectId) {
-      loadCards(projectId)
-    }
+    if (projectId) loadCards(projectId)
   }, [projectId, loadCards])
 
   const handleGenerate = useCallback(() => {
@@ -42,57 +41,83 @@ export default function ProjectDashboardPage() {
     generateDashboard(projectId)
   }, [projectId, generateDashboard])
 
-  return (
-    <div className="flex-1 overflow-auto p-6">
-      {dashboardCards.length === 0 ? (
+  const handleRemoveCard = useCallback(
+    (id: string) => { if (projectId) removeCard(projectId, id) },
+    [projectId, removeCard]
+  )
+
+  const handleAddNote = useCallback(() => {
+    if (projectId) addNote(projectId)
+  }, [projectId, addNote])
+
+  const handleLayoutChange = useCallback(
+    (items: { id: string; layout: CardLayout }[]) => {
+      if (projectId) saveLayouts(projectId, items)
+    },
+    [projectId, saveLayouts]
+  )
+
+  const handleCardContentChange = useCallback(
+    (cardId: string, content: unknown[]) => {
+      if (projectId) saveCardContent(projectId, cardId, content)
+    },
+    [projectId, saveCardContent]
+  )
+
+  if (dashboardCards.length === 0 && !isGeneratingDashboard) {
+    return (
+      <div className="flex-1 overflow-auto p-6">
         <div className="flex h-full flex-col items-center justify-center gap-6">
           <div className="flex flex-col items-center gap-4 text-center">
-            {isGeneratingDashboard ? (
-              <Image
-                src="/icons/dashboard-building.svg"
-                width={64}
-                height={64}
-                alt="Building dashboard..."
-                className="opacity-90"
-              />
-            ) : (
-              <div className="rounded-full bg-primary/10 p-4">
-                <LayoutGridIcon className="h-10 w-10 text-primary" />
-              </div>
-            )}
-
+            <div className="rounded-full bg-primary/10 p-4">
+              <LayoutGridIcon className="h-10 w-10 text-primary" />
+            </div>
             <div>
               <h2 className="text-xl font-semibold text-primary mb-2 font-everett">
-                {isGeneratingDashboard ? 'Building Auto-Dashboard...' : 'Your Dashboard is empty'}
+                Your Dashboard is empty
               </h2>
               <p className="text-muted-foreground max-w-sm">
-                {isGeneratingDashboard
-                  ? 'The AI is analyzing the dataset and picking the best charts and metrics. This usually takes around 30 seconds.'
-                  : 'You can generate a starter dashboard automatically, or manually add your own custom charts from the Chat page.'}
+                You can generate a starter dashboard automatically, or manually add your own custom charts from the Chat page.
               </p>
             </div>
-
             <div className="flex gap-4 mt-4">
-              <Button
-                size="lg"
-                onClick={handleGenerate}
-                disabled={isGeneratingDashboard}
-                className="gap-2"
-              >
-                {isGeneratingDashboard ? (
-                  <Loader2 className="animate-spin size-4" />
-                ) : (
-                  <LayoutGridIcon className="size-4" />
-                )}
-                {isGeneratingDashboard ? 'Generating...' : 'Auto-Generate Dashboard'}
+              <Button size="lg" onClick={handleGenerate} className="gap-2">
+                <LayoutGridIcon className="size-4" />
+                Auto-Generate Dashboard
               </Button>
             </div>
           </div>
         </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex-1 overflow-auto p-6">
+      {isGeneratingDashboard && dashboardCards.length === 0 ? (
+        <div className="flex h-full flex-col items-center justify-center gap-4">
+          <Image
+            src="/icons/dashboard-building.svg"
+            width={64}
+            height={64}
+            alt="Building dashboard..."
+            className="opacity-90"
+          />
+          <h2 className="text-xl font-semibold text-primary font-everett">
+            Building Auto-Dashboard...
+          </h2>
+          <p className="text-muted-foreground max-w-sm text-center">
+            The AI is analyzing the dataset and picking the best charts and metrics. This usually takes around 30 seconds.
+          </p>
+          <Loader2 className="animate-spin size-6 text-primary" />
+        </div>
       ) : (
         <DashboardGrid
-          dashboardCards={dashboardCards}
-          removeCard={(id) => removeCard(projectId, id)}
+          cards={dashboardCards}
+          onRemoveCard={handleRemoveCard}
+          onAddNote={handleAddNote}
+          onLayoutChange={handleLayoutChange}
+          onCardContentChange={handleCardContentChange}
         />
       )}
     </div>

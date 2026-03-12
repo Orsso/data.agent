@@ -8,11 +8,14 @@ from api.deps import require_project
 from api.models import (
     AddDashboardCardRequest,
     DashboardCardResponse,
+    SaveDashboardContentRequest,
     UpdateDashboardCardRequest,
+    UpdateLayoutsRequest,
     card_response,
 )
 from db import get_db
 from db.repositories.dashboard_cards import DashboardCardRepository
+from db.repositories.projects import ProjectRepository
 
 logger = logging.getLogger(__name__)
 
@@ -64,13 +67,28 @@ async def update_dashboard_card(
         cid = uuid.UUID(card_id)
     except ValueError as exc:
         raise HTTPException(400, "Invalid card ID") from exc
-    row = await DashboardCardRepository(db).update_card(
-        cid, code=req.code, value=req.value, fig=req.fig
-    )
+
+    updates = req.model_dump(exclude_none=True)
+    if not updates:
+        raise HTTPException(400, "No fields to update")
+
+    row = await DashboardCardRepository(db).update_card(cid, **updates)
     if not row:
         raise HTTPException(404, "Dashboard card not found")
     await db.commit()
     return card_response(row)
+
+
+@router.put("/layouts")
+async def update_dashboard_layouts(
+    project_id: str,
+    req: UpdateLayoutsRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    project_row = await require_project(project_id, db)
+    await DashboardCardRepository(db).update_layouts(project_row.id, req.items)
+    await db.commit()
+    return {"ok": True}
 
 
 @router.delete("/{card_id}", status_code=200)
@@ -89,3 +107,31 @@ async def delete_dashboard_card(
         raise HTTPException(404, "Dashboard card not found")
     logger.info("Dashboard card deleted [project=%s]: %s", project_id, card_id)
     return {"deleted": True}
+
+
+# --- Dashboard Content (BlockNote document) ---
+
+content_router = APIRouter(
+    prefix="/api/projects/{project_id}/dashboard-content", tags=["dashboard"]
+)
+
+
+@content_router.get("")
+async def get_dashboard_content(
+    project_id: str, db: AsyncSession = Depends(get_db)
+):
+    project_row = await require_project(project_id, db)
+    content = await ProjectRepository(db).get_dashboard_content(project_row.id)
+    return content
+
+
+@content_router.put("")
+async def save_dashboard_content(
+    project_id: str,
+    req: SaveDashboardContentRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    project_row = await require_project(project_id, db)
+    await ProjectRepository(db).save_dashboard_content(project_row.id, req.content)
+    await db.commit()
+    return {"ok": True}

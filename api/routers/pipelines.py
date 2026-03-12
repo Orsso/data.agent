@@ -1,5 +1,5 @@
 import logging
-import uuid
+import uuid as _uuid_mod
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -46,7 +46,7 @@ async def run_project_pipeline(
             factory = get_session_factory()
             async with factory() as session:
                 repo = ProjectRepository(session)
-                pid = uuid.UUID(project_id)
+                pid = _uuid_mod.UUID(project_id)
 
                 if pipeline_type == "insights":
                     insights = proj.get_last_insights()
@@ -90,6 +90,32 @@ async def run_project_pipeline(
                             "Dashboard cards persisted [project=%s]: %d cards",
                             project_id, len(cards),
                         )
+
+                        # Generate default BlockNote document
+                        def _bn_id() -> str:
+                            return _uuid_mod.uuid4().hex[:8]
+
+                        doc_blocks: list[dict] = [
+                            {
+                                "id": _bn_id(),
+                                "type": "heading",
+                                "props": {"level": 1},
+                                "content": [{"type": "text", "text": project_row.name or "Dashboard"}],
+                                "children": [],
+                            }
+                        ]
+                        for row in db_rows:
+                            block_type = "metric" if row.type == "metric" else "chart"
+                            doc_blocks.append(
+                                {
+                                    "id": _bn_id(),
+                                    "type": block_type,
+                                    "props": {"cardId": str(row.id)},
+                                    "content": [],
+                                    "children": [],
+                                }
+                            )
+                        await repo.update(pid, dashboard_content=doc_blocks)
 
                 await session.commit()
         except Exception:
