@@ -33,6 +33,11 @@ function defaultContent(card: DashboardCard): unknown[] {
   return [{ type: 'paragraph', content: [] }]
 }
 
+/** Extract the editor document with a single type cast (BlockNote types are opaque). */
+function getDoc(editor: { document: unknown }): unknown[] {
+  return editor.document as unknown as unknown[]
+}
+
 /** Check whether the editor has any user-typed content (ignoring chart/metric atom blocks). */
 function hasUserContent(blocks: unknown[]): boolean {
   for (const block of blocks) {
@@ -106,7 +111,7 @@ function CardEditor({ card, onContentChange, onEditorResize }: CardEditorProps) 
   /** Set initial isEmpty state + notify parent of initial height. */
   useEffect(() => {
     const timer = setTimeout(() => {
-      setIsEmpty(!hasUserContent(editor.document as unknown as unknown[]))
+      setIsEmpty(!hasUserContent(getDoc(editor)))
       const el = editor.domElement
       if (el && onEditorResize) onEditorResize(card.id, el.scrollHeight)
     }, 300)
@@ -116,12 +121,12 @@ function CardEditor({ card, onContentChange, onEditorResize }: CardEditorProps) 
 
   const handleChange = useCallback(() => {
     // Track empty state for placeholder visibility
-    setIsEmpty(!hasUserContent(editor.document as unknown as unknown[]))
+    setIsEmpty(!hasUserContent(getDoc(editor)))
 
     // Debounced content save
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {
-      onContentChange(card.id, editor.document as unknown as unknown[])
+      onContentChange(card.id, getDoc(editor))
     }, 1500)
 
     // Fast height notification for auto-resize

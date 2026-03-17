@@ -24,7 +24,7 @@ export const ChartBlock = createReactBlockSpec(
       const { data, layout } = useMemo(() => {
         if (!card?.fig) return { data: [], layout: {} }
 
-        const l: Partial<Plotly.Layout> = {
+        const chartLayout: Partial<Plotly.Layout> = {
           ...(card.fig.layout as Partial<Plotly.Layout>),
           autosize: true,
           margin: { t: 30, r: 20, l: 40, b: 30 },
@@ -33,7 +33,7 @@ export const ChartBlock = createReactBlockSpec(
           font: { family: 'var(--font-sans)', color: 'currentColor' },
         }
         const d = (card.fig.data as Plotly.Data[]).map((trace) => ({ ...trace }))
-        return { data: d, layout: l }
+        return { data: d, layout: chartLayout }
       }, [card?.fig])
 
       if (!card?.fig) {

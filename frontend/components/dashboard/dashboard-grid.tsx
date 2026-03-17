@@ -110,8 +110,8 @@ export default function DashboardGrid({
 
   // --- Layout ---
   const layout: LayoutItem[] = cards.map((card, i) => {
-    const l = card.layout ?? defaultLayout(card, i)
-    return { i: card.id, x: l.x, y: l.y, w: l.w, h: l.h, minW: 2, minH: minH(card.type) }
+    const cl = card.layout ?? defaultLayout(card, i)
+    return { i: card.id, x: cl.x, y: cl.y, w: cl.w, h: cl.h, minW: 2, minH: minH(card.type) }
   })
 
   // Persist layout on user drag stop
@@ -143,11 +143,11 @@ export default function DashboardGrid({
     if (idx === -1) return
 
     const card = currentCards[idx]
-    const l = card.layout ?? defaultLayout(card, idx)
+    const cl = card.layout ?? defaultLayout(card, idx)
     const neededH = Math.max(minH(card.type), pxToH(contentHeight + HEADER_PX))
 
-    if (neededH !== l.h) {
-      onLayoutChangeRef.current([{ id: cardId, layout: { ...l, h: neededH } }])
+    if (neededH !== cl.h) {
+      onLayoutChangeRef.current([{ id: cardId, layout: { ...cl, h: neededH } }])
     }
   }, []) // stable: reads from refs
 

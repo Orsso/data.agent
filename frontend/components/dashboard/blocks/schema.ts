@@ -9,5 +9,3 @@ export const dashboardSchema = BlockNoteSchema.create({
     metric: MetricBlock,
   },
 })
-
-export type DashboardEditorType = typeof dashboardSchema.BlockNoteEditor

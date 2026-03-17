@@ -41,6 +41,23 @@ interface DashboardState {
   clearSelection: () => void
 }
 
+/** Append a newly-created card to a project's list in the store. */
+function appendCard(
+  set: (fn: (state: DashboardState) => Partial<DashboardState>) => void,
+  projectId: string,
+  saved: ProjectDashboardCard,
+) {
+  set((state) => {
+    const projCards = state.dashboardCards[projectId] || []
+    return {
+      dashboardCards: {
+        ...state.dashboardCards,
+        [projectId]: [...projCards, toDashboardCard(saved)],
+      },
+    }
+  })
+}
+
 export const useDashboardStore = create<DashboardState>()((set) => ({
   dashboardCards: {},
   selectedCardIds: [] as string[],
@@ -69,15 +86,7 @@ export const useDashboardStore = create<DashboardState>()((set) => ({
         value: card.value,
         fig: card.fig as Record<string, unknown> | null,
       })
-      set((state) => {
-        const projCards = state.dashboardCards[projectId] || []
-        return {
-          dashboardCards: {
-            ...state.dashboardCards,
-            [projectId]: [...projCards, toDashboardCard(saved)],
-          },
-        }
-      })
+      appendCard(set, projectId, saved)
     } catch (error) {
       console.error('Failed to add dashboard card:', error)
     }
@@ -85,19 +94,8 @@ export const useDashboardStore = create<DashboardState>()((set) => ({
 
   addNote: async (projectId) => {
     try {
-      const saved = await addDashboardCard(projectId, {
-        type: 'note',
-        title: 'Note',
-      })
-      set((state) => {
-        const projCards = state.dashboardCards[projectId] || []
-        return {
-          dashboardCards: {
-            ...state.dashboardCards,
-            [projectId]: [...projCards, toDashboardCard(saved)],
-          },
-        }
-      })
+      const saved = await addDashboardCard(projectId, { type: 'note', title: 'Note' })
+      appendCard(set, projectId, saved)
     } catch (error) {
       console.error('Failed to add note card:', error)
     }
