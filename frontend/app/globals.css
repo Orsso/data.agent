@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@custom-variant dark (&:is(.dark *));
+
 @source "../components";
 @source "../lib";
 @source "../app";
@@ -53,6 +55,19 @@
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
+
+  /* collapsible animations */
+  --animate-collapsible-down: collapsible-down 0.2s ease-out;
+  --animate-collapsible-up: collapsible-up 0.15s ease-in forwards;
+}
+
+@keyframes collapsible-down {
+  from { height: 0; opacity: 0; }
+  to { height: var(--radix-collapsible-content-height); opacity: 1; }
+}
+@keyframes collapsible-up {
+  from { height: var(--radix-collapsible-content-height); opacity: 1; }
+  to { height: 0; opacity: 0; }
 }
 
 @layer base {
@@ -194,22 +209,62 @@
 .card-editor .bn-editor {
   padding-inline: 12px;
   padding-block: 4px;
+  background: transparent;
+  font-family: var(--font-everett), system-ui, sans-serif;
+}
+.card-editor .bn-container {
+  background: transparent;
 }
 .card-editor .bn-block-group .bn-block-outer {
   padding: 0;
 }
-/* Remove the blue 4px selection outline on atom (content:none) blocks */
-.card-editor .ProseMirror-selectednode > .bn-block-content > *,
-.card-editor .bn-block-content.ProseMirror-selectednode > * {
-  outline: none !important;
+/*
+ * Kill BlockNote's native placeholder when its editor doesn't have focus.
+ * BlockNote sets data-is-empty-and-focused via ProseMirror decorations, but
+ * only clears it on the next transaction — not on blur. So when focus moves
+ * to another editor, the attribute lingers and the placeholder stays visible.
+ * We override with :not(:focus-within) which the browser manages correctly.
+ */
+.card-editor:not(:focus-within) [data-is-empty-and-focused] .bn-inline-content:has(> .ProseMirror-trailingBreak:only-child)::before {
+  content: none !important;
 }
-/* Show placeholder only when the card editor is empty (no user-typed content) */
-.card-editor-empty .bn-block-outer:last-child .bn-inline-content:has(> .ProseMirror-trailingBreak:only-child)::before {
+
+/*
+ * Custom placeholder for empty, UNFOCUSED card editors — shown on hover only.
+ * When the editor gains focus, BlockNote's native placeholder takes over.
+ */
+.react-grid-item:hover .card-editor-empty:not(:focus-within) .bn-block-outer:last-child .bn-inline-content:has(> .ProseMirror-trailingBreak:only-child)::before {
   content: "Enter text or type '/' for commands";
   color: hsl(var(--muted-foreground));
   opacity: 0.5;
   pointer-events: none;
   font-style: italic;
+}
+
+/* Transparent drag placeholder for react-grid-layout */
+.react-grid-item.react-grid-placeholder {
+  background: hsl(var(--primary) / 0.05) !important;
+  border: 1.5px dashed hsl(var(--primary) / 0.2);
+  border-radius: var(--radius);
+  opacity: 1 !important;
+}
+
+/* Subtle resize handle — visible only on card hover */
+.react-grid-item > .react-resizable-handle {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.react-grid-item:hover > .react-resizable-handle {
+  opacity: 0.4;
+}
+.react-grid-item:hover > .react-resizable-handle:hover {
+  opacity: 0.7;
+}
+
+/* Remove the blue 4px selection outline on atom (content:none) blocks */
+.card-editor .ProseMirror-selectednode > .bn-block-content > *,
+.card-editor .bn-block-content.ProseMirror-selectednode > * {
+  outline: none !important;
 }
 
 /* custom scrollbar */

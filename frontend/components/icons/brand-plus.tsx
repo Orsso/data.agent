@@ -1,0 +1,15 @@
+import type { SVGProps } from 'react'
+
+export function BrandPlusIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+      <path
+        d="M10 1C9.47 1 8.961 1.211 8.586 1.586C8.211 1.961 8 2.47 8 3V8H3C2.47 8 1.961 8.211 1.586 8.586C1.211 8.961 1 9.47 1 10V12C1 13.1 1.9 14 3 14H8V19C8 20.1 8.9 21 10 21H12C12.53 21 13.039 20.789 13.414 20.414C13.789 20.039 14 19.53 14 19V14H19C19.53 14 20.039 13.789 20.414 13.414C20.789 13.039 21 12.53 21 12V10C21 9.47 20.789 8.961 20.414 8.586C20.039 8.211 19.53 8 19 8H14V3C14 2.47 13.789 1.961 13.414 1.586C13.039 1.211 12.53 1 12 1H10Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}

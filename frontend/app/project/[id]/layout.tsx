@@ -9,11 +9,11 @@ import {
   ChevronRightIcon,
   LayoutGridIcon,
   MessageCircleIcon,
-  PlusIcon,
   Trash2Icon,
   UploadIcon,
   Loader2,
 } from 'lucide-react'
+import { BrandPlusIcon } from '@/components/icons/brand-plus'
 
 import { BrandLogo } from '@/components/shared/brand-logo'
 import { cn } from '@/lib/utils'
@@ -235,7 +235,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                     )}
                   >
-                    <PlusIcon className="size-3.5 shrink-0" />
+                    <BrandPlusIcon className="size-3.5 shrink-0" />
                     <span>New Chat</span>
                   </Link>
 

@@ -1,7 +1,13 @@
 'use client'
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useCreateBlockNote } from '@blocknote/react'
+import {
+  useCreateBlockNote,
+  FormattingToolbarController,
+  SuggestionMenuController,
+  GridSuggestionMenuController,
+  LinkToolbarController,
+} from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
 import '@blocknote/shadcn/style.css'
 
@@ -38,6 +44,13 @@ function hasUserContent(blocks: unknown[]): boolean {
   return false
 }
 
+/**
+ * Fixed positioning so floating-ui flip/shift middlewares resolve against the
+ * viewport. Works because useCSSTransforms={false} on the grid removes the
+ * CSS transform that would otherwise trap position:fixed inside the card.
+ */
+const FIXED_POSITIONING = { strategy: 'fixed' as const }
+
 interface CardEditorProps {
   card: DashboardCard
   onContentChange: (cardId: string, content: unknown[]) => void
@@ -49,6 +62,11 @@ function CardEditor({ card, onContentChange, onEditorResize }: CardEditorProps) 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const resizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isEmpty, setIsEmpty] = useState(true)
+  const editorRef = useRef<{ document: unknown[] } | null>(null)
+  const onContentChangeRef = useRef(onContentChange)
+  onContentChangeRef.current = onContentChange
+  const cardIdRef = useRef(card.id)
+  cardIdRef.current = card.id
 
   // Keep the registry in sync with card data.
   useEffect(() => {
@@ -68,6 +86,22 @@ function CardEditor({ card, onContentChange, onEditorResize }: CardEditorProps) 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     initialContent: initialContent as any,
   })
+  editorRef.current = editor as unknown as { document: unknown[] }
+
+  // Flush any pending debounced save when the component unmounts (e.g. tab switch).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current)
+        saveTimerRef.current = null
+        const doc = editorRef.current?.document
+        if (doc) {
+          onContentChangeRef.current(cardIdRef.current, doc)
+        }
+      }
+    }
+  }, [])
 
   /** Set initial isEmpty state + notify parent of initial height. */
   useEffect(() => {
@@ -107,8 +141,22 @@ function CardEditor({ card, onContentChange, onEditorResize }: CardEditorProps) 
         onChange={handleChange}
         theme="light"
         sideMenu={false}
+        formattingToolbar={false}
+        linkToolbar={false}
+        slashMenu={false}
+        emojiPicker={false}
         shadCNComponents={portaledShadCNComponents}
-      />
+      >
+        <FormattingToolbarController floatingOptions={FIXED_POSITIONING} />
+        <SuggestionMenuController triggerCharacter="/" floatingOptions={FIXED_POSITIONING} />
+        <GridSuggestionMenuController
+          triggerCharacter=":"
+          columns={10}
+          minQueryLength={2}
+          floatingOptions={FIXED_POSITIONING}
+        />
+        <LinkToolbarController floatingOptions={FIXED_POSITIONING} />
+      </BlockNoteView>
     </div>
   )
 }

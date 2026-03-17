@@ -121,43 +121,57 @@ export const useDashboardStore = create<DashboardState>()((set) => ({
   },
 
   saveLayouts: async (projectId, items) => {
+    // Optimistic update — apply layout changes immediately so the grid
+    // re-renders without waiting for the API round-trip.
+    set((state) => {
+      const projCards = state.dashboardCards[projectId] || []
+      const layoutMap = new Map(items.map((i) => [i.id, i.layout]))
+      let changed = false
+      const next = projCards.map((c) => {
+        const layout = layoutMap.get(c.id)
+        if (!layout) return c
+        const prev = c.layout
+        if (
+          prev &&
+          prev.x === layout.x &&
+          prev.y === layout.y &&
+          prev.w === layout.w &&
+          prev.h === layout.h
+        ) {
+          return c // identical — keep same reference
+        }
+        changed = true
+        return { ...c, layout }
+      })
+      if (!changed) return state // no store update at all
+      return {
+        dashboardCards: {
+          ...state.dashboardCards,
+          [projectId]: next,
+        },
+      }
+    })
     try {
       await updateDashboardLayouts(projectId, items)
-      // Update local state — only create new card objects when layout actually changed
-      set((state) => {
-        const projCards = state.dashboardCards[projectId] || []
-        const layoutMap = new Map(items.map((i) => [i.id, i.layout]))
-        let changed = false
-        const next = projCards.map((c) => {
-          const layout = layoutMap.get(c.id)
-          if (!layout) return c
-          const prev = c.layout
-          if (
-            prev &&
-            prev.x === layout.x &&
-            prev.y === layout.y &&
-            prev.w === layout.w &&
-            prev.h === layout.h
-          ) {
-            return c // identical — keep same reference
-          }
-          changed = true
-          return { ...c, layout }
-        })
-        if (!changed) return state // no store update at all
-        return {
-          dashboardCards: {
-            ...state.dashboardCards,
-            [projectId]: next,
-          },
-        }
-      })
     } catch (error) {
       console.error('Failed to save layouts:', error)
     }
   },
 
   saveCardContent: async (projectId, cardId, content) => {
+    // Optimistic update — keep local state in sync so navigating away
+    // and back shows the latest content even before the API responds.
+    set((state) => {
+      const projCards = state.dashboardCards[projectId]
+      if (!projCards) return state
+      const idx = projCards.findIndex((c) => c.id === cardId)
+      if (idx === -1) return state
+      const card = projCards[idx]
+      if (card.content === content) return state
+      const next = [...projCards]
+      next[idx] = { ...card, content }
+      return { dashboardCards: { ...state.dashboardCards, [projectId]: next } }
+    })
     try {
       await updateDashboardCard(projectId, cardId, { content })
     } catch (error) {

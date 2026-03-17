@@ -66,7 +66,7 @@ export default function ProjectDashboardPage() {
 
   if (dashboardCards.length === 0 && !isGeneratingDashboard) {
     return (
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto bg-white p-6 dark:bg-card">
         <div className="flex h-full flex-col items-center justify-center gap-6">
           <div className="flex flex-col items-center gap-4 text-center">
             <div className="rounded-full bg-primary/10 p-4">
@@ -93,7 +93,7 @@ export default function ProjectDashboardPage() {
   }
 
   return (
-    <div className="flex-1 overflow-auto p-6">
+    <div className="flex-1 overflow-auto bg-white p-6 dark:bg-card">
       {isGeneratingDashboard && dashboardCards.length === 0 ? (
         <div className="flex h-full flex-col items-center justify-center gap-4">
           <Image

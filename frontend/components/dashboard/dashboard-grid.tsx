@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ReactGridLayout } from 'react-grid-layout/legacy'
-import { GripVerticalIcon, PlusIcon, Trash2Icon } from 'lucide-react'
+import { CheckIcon, GripVerticalIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { BrandPlusIcon } from '@/components/icons/brand-plus'
+import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import CardEditor from './card-editor'
 import type { DashboardCard, CardLayout } from '@/lib/domain-types'
 
@@ -71,6 +73,10 @@ export default function DashboardGrid({
   onLayoutChange,
   onCardContentChange,
 }: DashboardGridProps) {
+  const selectedCardIds = useDashboardStore((s) => s.selectedCardIds)
+  const toggleCardSelection = useDashboardStore((s) => s.toggleCardSelection)
+  const clearSelection = useDashboardStore((s) => s.clearSelection)
+
   const containerRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(1200)
 
@@ -146,14 +152,16 @@ export default function DashboardGrid({
   }, []) // stable: reads from refs
 
   return (
-    <div ref={containerRef} className="h-full w-full">
-      <div className="mb-4 flex justify-end">
-        <Button variant="outline" size="sm" className="gap-2" onClick={onAddNote}>
-          <PlusIcon className="size-4" />
-          Add Note
-        </Button>
-      </div>
-
+    <div
+      ref={containerRef}
+      className="relative h-full w-full"
+      onDoubleClick={(e) => {
+        // Clear selection only when double-clicking the background, not inside a card
+        if (!(e.target as HTMLElement).closest('.react-grid-item')) {
+          clearSelection()
+        }
+      }}
+    >
       <ReactGridLayout
         width={width}
         className="layout"
@@ -161,23 +169,33 @@ export default function DashboardGrid({
         cols={COLS}
         rowHeight={ROW_HEIGHT}
         draggableHandle=".drag-handle"
+        useCSSTransforms={false}
         onDragStop={handleDragStop}
         onResizeStop={handleResizeStop}
       >
-        {cards.map((card) => (
+        {cards.map((card) => {
+          const isSelected = selectedCardIds.includes(card.id)
+          return (
           <div
             key={card.id}
-            className="group flex flex-col overflow-hidden rounded-xl border border-border/50 bg-card shadow-sm transition-shadow hover:shadow-md"
+            className={`group flex flex-col overflow-hidden rounded-xl transition-colors ${isSelected ? 'ring-2 ring-primary/40 bg-primary/5' : 'bg-transparent hover:bg-muted/20'}`}
           >
-            <div className="drag-handle flex cursor-move items-center justify-between border-b border-border/40 bg-muted/30 px-3 py-1.5 opacity-50 transition-opacity group-hover:opacity-100">
+            <div className={`drag-handle flex cursor-move items-center justify-between px-3 py-1.5 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
               <div className="flex items-center gap-2 min-w-0">
-                <GripVerticalIcon className="size-4 shrink-0 text-muted-foreground" />
-                <h3 className="truncate text-sm font-medium text-foreground">{card.title}</h3>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); toggleCardSelection(card.id) }}
+                  className={`flex size-4 shrink-0 items-center justify-center rounded border transition-colors ${isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/40 hover:border-primary'}`}
+                >
+                  {isSelected && <CheckIcon className="size-3" />}
+                </button>
+                <GripVerticalIcon className="size-4 shrink-0 text-muted-foreground/60" />
+                <h3 className="truncate text-xs font-medium text-muted-foreground">{card.title}</h3>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                className="h-6 w-6 text-muted-foreground/60 hover:text-destructive"
                 onClick={() => onRemoveCard(card.id)}
               >
                 <Trash2Icon className="h-3.5 w-3.5" />
@@ -192,8 +210,18 @@ export default function DashboardGrid({
               />
             </div>
           </div>
-        ))}
+          )
+        })}
       </ReactGridLayout>
+
+      <button
+        type="button"
+        onClick={onAddNote}
+        className="fixed bottom-8 right-8 z-50 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:scale-105 hover:shadow-xl active:scale-95"
+        aria-label="Add note"
+      >
+        <BrandPlusIcon className="size-7" />
+      </button>
     </div>
   )
 }
