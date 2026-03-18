@@ -77,24 +77,21 @@ function CardEditor({ card, onContentChange, onEditorResize }: CardEditorProps) 
   useEffect(() => {
     cardRegistry.set(card.id, card)
     return () => { cardRegistry.delete(card.id) }
-  }, [card.id, card.type, card.title, card.value, card.fig])
+  }, [card])
 
   const initialContent = useMemo(
     () => (card.content && card.content.length > 0 ? card.content : defaultContent(card)),
-    // Only compute once per card ID
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only compute once per card ID
     [card.id]
   )
 
   const editor = useCreateBlockNote({
     schema: dashboardSchema,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     initialContent: initialContent as any,
   })
   editorRef.current = editor as unknown as { document: unknown[] }
 
   // Flush any pending debounced save when the component unmounts (e.g. tab switch).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) {

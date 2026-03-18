@@ -18,7 +18,7 @@ export function QuestionInput({ questions, onSubmit }: QuestionInputProps) {
   const submittedRef = useRef(false)
 
   const isResolved = questions.every((q) => q.selected_answer)
-  const isInteractive = !!onSubmit && !isResolved && !submittedRef.current
+  const isInteractive = !!onSubmit && !isResolved
 
   // Auto-submit when all questions have a local answer
   useEffect(() => {
