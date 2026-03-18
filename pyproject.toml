@@ -23,12 +23,10 @@ dependencies = [
     "psycopg[binary]~=3.2",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "ruff>=0.11",
-    "pytest>=8.0",
-    "pytest-asyncio>=0.25",
-]
+[dependency-groups]
+lint = ["ruff>=0.11"]
+test = ["pytest>=8.0", "pytest-asyncio>=0.25"]
+dev = [{include-group = "lint"}, {include-group = "test"}]
 
 [tool.ruff]
 target-version = "py313"
