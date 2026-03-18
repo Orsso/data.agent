@@ -105,7 +105,6 @@ export const PromptInputTextarea = forwardRef<
         if (e.shiftKey) {
           return
         }
-        e.preventDefault()
 
         const { form } = e.currentTarget
         const submitButton = form?.querySelector(
@@ -115,6 +114,7 @@ export const PromptInputTextarea = forwardRef<
           return
         }
 
+        e.preventDefault()
         form?.requestSubmit()
       }
     },
