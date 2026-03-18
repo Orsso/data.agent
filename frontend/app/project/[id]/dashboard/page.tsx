@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { DownloadIcon, LayoutGridIcon, Loader2 } from 'lucide-react'
 import Image from 'next/image'
@@ -9,8 +9,8 @@ import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import { exportDashboardPdf } from '@/lib/export-dashboard-pdf'
+import { DASHBOARD_GRID_ID } from '@/components/dashboard/dashboard-grid'
 import type { DashboardCard, CardLayout } from '@/lib/domain-types'
-import type { DashboardGridHandle } from '@/components/dashboard/dashboard-grid'
 
 const DashboardGrid = dynamic(
   () => import('@/components/dashboard/dashboard-grid'),
@@ -34,11 +34,10 @@ export default function ProjectDashboardPage() {
   const isGeneratingDashboard = useDashboardStore((s) => s.isGeneratingDashboard)
   const generateDashboard = useDashboardStore((s) => s.generateDashboard)
 
-  const gridRef = useRef<DashboardGridHandle>(null)
   const [isExporting, setIsExporting] = useState(false)
 
   const handleExport = useCallback(async () => {
-    const el = gridRef.current?.container
+    const el = document.getElementById(DASHBOARD_GRID_ID)
     if (!el) return
     setIsExporting(true)
     try {
@@ -143,7 +142,6 @@ export default function ProjectDashboardPage() {
             </button>
           </div>
           <DashboardGrid
-            ref={gridRef}
             cards={dashboardCards}
             onRemoveCard={handleRemoveCard}
             onAddNote={handleAddNote}

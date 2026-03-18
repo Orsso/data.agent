@@ -8,8 +8,15 @@ export async function exportDashboardPdf(
   gridElement: HTMLElement,
   filename = 'dashboard.pdf',
 ): Promise<void> {
-  // Hide interactive chrome during capture
+  // Hide interactive chrome and expand overflow so the full grid is captured
   gridElement.classList.add('exporting')
+  const scrollParent = gridElement.closest<HTMLElement>('.overflow-auto')
+  const savedOverflow = scrollParent?.style.overflow
+  const savedHeight = scrollParent?.style.height
+  if (scrollParent) {
+    scrollParent.style.overflow = 'visible'
+    scrollParent.style.height = 'auto'
+  }
 
   try {
     const canvas = await html2canvas(gridElement, {
@@ -36,6 +43,10 @@ export async function exportDashboardPdf(
 
     pdf.save(filename)
   } finally {
+    if (scrollParent) {
+      scrollParent.style.overflow = savedOverflow ?? ''
+      scrollParent.style.height = savedHeight ?? ''
+    }
     gridElement.classList.remove('exporting')
   }
 }

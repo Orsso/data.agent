@@ -1,6 +1,6 @@
 'use client'
 
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ReactGridLayout } from 'react-grid-layout/legacy'
 import { CheckIcon, GripVerticalIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -66,23 +66,20 @@ interface DashboardGridProps {
   onCardContentChange: (cardId: string, content: unknown[]) => void
 }
 
-export interface DashboardGridHandle {
-  readonly container: HTMLDivElement | null
-}
+export const DASHBOARD_GRID_ID = 'dashboard-grid'
 
-const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(function DashboardGrid({
+function DashboardGrid({
   cards,
   onRemoveCard,
   onAddNote,
   onLayoutChange,
   onCardContentChange,
-}, ref) {
+}: DashboardGridProps) {
   const selectedCardIds = useDashboardStore((s) => s.selectedCardIds)
   const toggleCardSelection = useDashboardStore((s) => s.toggleCardSelection)
   const clearSelection = useDashboardStore((s) => s.clearSelection)
 
   const containerRef = useRef<HTMLDivElement>(null)
-  useImperativeHandle(ref, () => ({ get container() { return containerRef.current } }), [])
   const [width, setWidth] = useState(1200)
 
   // Track cards and callback in refs so ResizeObserver/event handlers
@@ -156,6 +153,7 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
 
   return (
     <div
+      id={DASHBOARD_GRID_ID}
       ref={containerRef}
       className="relative h-full w-full"
       onDoubleClick={(e) => {
@@ -227,6 +225,6 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
       </button>
     </div>
   )
-})
+}
 
 export default DashboardGrid
