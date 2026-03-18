@@ -20,7 +20,6 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-          python-version: "3.13"
       - run: uv sync --frozen --dev
       - run: uv run ruff check core/ api/ db/ tests/
       - run: uv run ruff format --check core/ api/ db/ tests/
@@ -35,7 +34,6 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-          python-version: "3.13"
       - run: uv sync --frozen --dev
       - run: uv run pytest tests/ -v --tb=short
 
