@@ -1,5 +1,6 @@
 """Shared fixtures for the backend test suite."""
 
+import os
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -7,6 +8,8 @@ from uuid import uuid4
 
 import pandas as pd
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from core.models.sources import DataSource, SourceRegistry
 from core.models.turn import TurnState
@@ -212,3 +215,71 @@ def make_card_row(**overrides):
     }
     defaults.update(overrides)
     return SimpleNamespace(**defaults)
+
+
+# ---------------------------------------------------------------------------
+# Integration test fixtures — real PostgreSQL
+# ---------------------------------------------------------------------------
+
+_TEST_DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql+asyncpg://data_agent:data_agent@localhost:5432/data_agent",
+)
+
+
+@pytest.fixture
+async def db_session():
+    """Yield an AsyncSession that is rolled back after each test.
+
+    Uses NullPool so each test gets a fresh connection — no stale-connection
+    issues between tests.  ``commit`` is replaced by ``flush`` so that router
+    code that explicitly commits doesn't persist data.
+    """
+    engine = create_async_engine(_TEST_DATABASE_URL, echo=False, poolclass=NullPool)
+    session = AsyncSession(engine, expire_on_commit=False)
+
+    async def _flush_instead():
+        await session.flush()
+
+    session.commit = _flush_instead  # type: ignore[method-assign]
+
+    try:
+        yield session
+    finally:
+        await session.rollback()
+        await session.close()
+        await engine.dispose()
+
+
+@pytest.fixture
+async def client():
+    """httpx.AsyncClient wired to the FastAPI app with a test-controlled engine.
+
+    Each request gets its own session (like the real ``get_db``), but backed
+    by a NullPool engine created on the current event loop — avoids the
+    cross-loop connection issues with the module-level engine.
+    """
+    from httpx import ASGITransport, AsyncClient
+
+    from api.main import app
+    from db import get_db
+
+    engine = create_async_engine(_TEST_DATABASE_URL, echo=False, poolclass=NullPool)
+
+    async def _override_get_db():
+        session = AsyncSession(engine, expire_on_commit=False)
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+    app.dependency_overrides[get_db] = _override_get_db
+    transport = ASGITransport(app=app, raise_app_exceptions=False)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
+    app.dependency_overrides.clear()
+    await engine.dispose()

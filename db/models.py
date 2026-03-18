@@ -9,7 +9,10 @@ from core.constants import DEFAULT_MODEL
 
 
 class Base(DeclarativeBase):
-    pass
+    # Use RETURNING to fetch server-generated values (server_default, onupdate)
+    # immediately after INSERT/UPDATE. Prevents MissingGreenlet errors when
+    # accessing these columns from sync code after an async flush().
+    __mapper_args__ = {"eager_defaults": True}
 
 
 class ProjectRow(Base):
