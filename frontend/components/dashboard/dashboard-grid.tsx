@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { ReactGridLayout } from 'react-grid-layout/legacy'
 import { CheckIcon, GripVerticalIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -66,18 +66,23 @@ interface DashboardGridProps {
   onCardContentChange: (cardId: string, content: unknown[]) => void
 }
 
-export default function DashboardGrid({
+export interface DashboardGridHandle {
+  readonly container: HTMLDivElement | null
+}
+
+const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(function DashboardGrid({
   cards,
   onRemoveCard,
   onAddNote,
   onLayoutChange,
   onCardContentChange,
-}: DashboardGridProps) {
+}, ref) {
   const selectedCardIds = useDashboardStore((s) => s.selectedCardIds)
   const toggleCardSelection = useDashboardStore((s) => s.toggleCardSelection)
   const clearSelection = useDashboardStore((s) => s.clearSelection)
 
   const containerRef = useRef<HTMLDivElement>(null)
+  useImperativeHandle(ref, () => ({ get container() { return containerRef.current } }), [])
   const [width, setWidth] = useState(1200)
 
   // Track cards and callback in refs so ResizeObserver/event handlers
@@ -222,4 +227,6 @@ export default function DashboardGrid({
       </button>
     </div>
   )
-}
+})
+
+export default DashboardGrid
