@@ -83,9 +83,9 @@ export default function DashboardGrid({
   // Track cards and callback in refs so ResizeObserver/event handlers
   // always read fresh values without re-creating effects.
   const cardsRef = useRef(cards)
-  cardsRef.current = cards
+  useEffect(() => { cardsRef.current = cards }, [cards])
   const onLayoutChangeRef = useRef(onLayoutChange)
-  onLayoutChangeRef.current = onLayoutChange
+  useEffect(() => { onLayoutChangeRef.current = onLayoutChange }, [onLayoutChange])
 
   // IDs of cards the user has manually shrunk below content height.
   const compactedRef = useRef(new Set<string>())
@@ -115,13 +115,11 @@ export default function DashboardGrid({
   })
 
   // Persist layout on user drag stop
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleDragStop = useCallback((newLayout: any) => {
     onLayoutChange(layoutToItems(newLayout))
   }, [onLayoutChange])
 
   // Persist layout on user resize stop + track compaction
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleResizeStop = useCallback((newLayout: any, _oldItem: any, newItem: any) => {
     // If the user made the card shorter than its content, mark it compacted
     // so auto-height doesn't fight the user's choice.

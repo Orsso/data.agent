@@ -11,11 +11,10 @@ const MESSAGES = [
 ]
 
 export function useUploadMessage(active: boolean) {
-  const [idx, setIdx] = useState(0)
+  const [idx, setIdx] = useState(() => Math.floor(Math.random() * MESSAGES.length))
 
   useEffect(() => {
     if (!active) return
-    setIdx(Math.floor(Math.random() * MESSAGES.length))
     const id = setInterval(() => {
       setIdx((prev) => {
         let next: number

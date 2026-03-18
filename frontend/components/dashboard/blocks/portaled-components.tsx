@@ -323,7 +323,6 @@ SelectItem.displayName = 'SelectItem'
  *
  * The `any` cast is required because the TS type is not exported from @blocknote/shadcn.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const portaledShadCNComponents: any = {
   Popover: {
     Popover,

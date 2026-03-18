@@ -20,9 +20,8 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-      - run: uv sync --frozen --dev
-      - run: uv run ruff check core/ api/ db/ tests/
-      - run: uv run ruff format --check core/ api/ db/ tests/
+      - run: uv run --only-group lint ruff check core/ api/ db/ tests/
+      - run: uv run --only-group lint ruff format --check core/ api/ db/ tests/
 
   # ── Backend: tests ─────────────────────────────────────────────────────
   backend-test:
@@ -34,7 +33,7 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-      - run: uv sync --frozen --dev
+      - run: uv sync --frozen --group test
       - run: uv run pytest tests/ -v --tb=short
 
   # ── Frontend: lint + typecheck ─────────────────────────────────────────
