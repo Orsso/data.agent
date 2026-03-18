@@ -185,12 +185,48 @@
   @apply border-b border-border/50 px-3 py-2;
 }
 
+.prose-agent > *:first-child { margin-top: 0; }
+.prose-agent > *:last-child { margin-bottom: 0; }
+
 .prose-agent a {
   @apply text-primary underline underline-offset-2;
 }
 
 .prose-agent hr {
   @apply my-6 border-border/50;
+}
+
+/* streaming cursor — inline caret after the last text element */
+.streaming-cursor > *:last-child::after {
+  content: '';
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  border-radius: 1px;
+  background: hsl(var(--primary));
+  animation: cursor-blink 1s steps(2) infinite;
+}
+@keyframes cursor-blink {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* skeleton shimmer for loading placeholders */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 25%,
+    hsl(var(--muted-foreground) / 0.08) 50%,
+    hsl(var(--muted)) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
 }
 
 /* pulsing dots */

@@ -69,7 +69,7 @@ export const PromptInput = ({
       ref={formRef}
       {...props}
     >
-      <InputGroup className='overflow-hidden'>{children}</InputGroup>
+      <InputGroup className='overflow-hidden border-0 shadow-none ring-0!'>{children}</InputGroup>
     </form>
   )
 }
@@ -105,7 +105,6 @@ export const PromptInputTextarea = forwardRef<
         if (e.shiftKey) {
           return
         }
-        e.preventDefault()
 
         const { form } = e.currentTarget
         const submitButton = form?.querySelector(
@@ -115,6 +114,7 @@ export const PromptInputTextarea = forwardRef<
           return
         }
 
+        e.preventDefault()
         form?.requestSubmit()
       }
     },
