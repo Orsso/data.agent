@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { AlertCircle, Sparkles } from 'lucide-react'
 import { motion, AnimatePresence, LayoutGroup, type Variants } from 'motion/react'
@@ -132,22 +132,15 @@ export default function ProjectChatPage() {
     }
   }, [isStreaming, hasPendingQuestions])
 
-  // Track streaming→final transition to skip entry animation on the
-  // last assistant message (avoids flash when streaming completes).
-  const prevIsStreamingRef = useRef(isStreaming)
-  const justFinishedStreaming = prevIsStreamingRef.current && !isStreaming
-  useEffect(() => {
-    prevIsStreamingRef.current = isStreaming
-  })
-
   // Track whether we went through the analyzing phase, so we only
   // animate suggestion chips when they replace skeletons (not on reload).
-  const wasAnalyzingRef = useRef(false)
+  // Uses the "set state during render" pattern (React 19 compliant).
+  const [wasAnalyzing, setWasAnalyzing] = useState(false)
 
   const hasSources = sources.length > 0
   const isEmpty = messages.length === 0 && !isStreaming && !isLoading
   const showAnalyzing = isAnalyzing && isEmpty
-  if (showAnalyzing) wasAnalyzingRef.current = true
+  if (showAnalyzing && !wasAnalyzing) setWasAnalyzing(true)
   const showSuggestions = hasSources && isEmpty && !isAnalyzing && suggestedQuestions.length > 0
   const showWelcome = !hasSources && isEmpty && !isAnalyzing
   const showWaitingIndicator = isStreaming && streamingMessage
@@ -251,9 +244,9 @@ export default function ProjectChatPage() {
                               key={`suggestion-${i}`}
                               type="button"
                               onClick={() => handleSuggestionClick(q)}
-                              initial={wasAnalyzingRef.current ? { opacity: 0, y: 6 } : false}
+                              initial={wasAnalyzing ? { opacity: 0, y: 6 } : false}
                               animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.3, delay: wasAnalyzingRef.current ? i * 0.07 : 0 }}
+                              transition={{ duration: 0.3, delay: wasAnalyzing ? i * 0.07 : 0 }}
                               className="group/chip flex items-start gap-2.5 rounded-xl border border-border/50 bg-card/60 px-4 py-3 text-left text-sm text-foreground backdrop-blur-sm transition-all hover:border-primary/30 hover:bg-card hover:shadow-md active:scale-[0.98]"
                             >
                               <Sparkles className="mt-0.5 size-4 shrink-0 text-accent transition-colors group-hover/chip:text-primary" />
@@ -285,16 +278,11 @@ export default function ProjectChatPage() {
                 )}
 
                 <AnimatePresence initial={false}>
-                  {messages.map((msg) => {
-                    const isLastMsg = msg === lastMsg
-                    // Skip fade-in animation for the message that was just streamed
-                    const skipEntry = isLastMsg && justFinishedStreaming
-
-                    return (
+                  {messages.map((msg) => (
                       <motion.div
                         key={msg.id}
                         variants={messageVariants}
-                        initial={skipEntry ? 'visible' : 'hidden'}
+                        initial={msg.role === 'user' ? 'hidden' : false}
                         animate="visible"
                         layout
                       >
@@ -343,8 +331,7 @@ export default function ProjectChatPage() {
                           )}
                         </Message>
                       </motion.div>
-                    )
-                  })}
+                  ))}
                 </AnimatePresence>
 
                 {showWaitingIndicator && (
