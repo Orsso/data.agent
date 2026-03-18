@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql+asyncpg://data_agent:data_agent@localhost:5432/data_agent",
+    "postgresql+asyncpg://data_agent:data_agent@localhost:5432/data_agent_test",
 )
 
 # Derive a sync URL for Alembic (it runs its own async loop internally)
@@ -20,8 +20,8 @@ SYNC_DATABASE_URL = DATABASE_URL.replace("+asyncpg", "")
 async def temp_database():
     """Create a temporary database, yield its async URL, then drop it."""
     db_name = f"test_migrations_{uuid.uuid4().hex[:8]}"
-    # Use the default database to create/drop the temp one
-    admin_url = DATABASE_URL.rsplit("/", 1)[0] + "/data_agent"
+    # Use the database from DATABASE_URL itself as the admin connection
+    admin_url = DATABASE_URL
     engine = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
     async with engine.connect() as conn:
         await conn.execute(text(f"CREATE DATABASE {db_name}"))

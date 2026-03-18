@@ -223,8 +223,42 @@ def make_card_row(**overrides):
 
 _TEST_DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql+asyncpg://data_agent:data_agent@localhost:5432/data_agent",
+    # Default to a dedicated test database so local runs never touch the dev DB
+    "postgresql+asyncpg://data_agent:data_agent@localhost:5432/data_agent_test",
 )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _ensure_test_db():
+    """Create the test database and apply migrations once per session.
+
+    Only runs when using the default local URL (not in CI where DATABASE_URL
+    is set and migrations are applied by the workflow).
+    """
+    import subprocess
+
+    if os.environ.get("DATABASE_URL"):
+        # CI — database already exists and migrations are applied by the workflow
+        return
+
+    admin_url = "postgresql://data_agent:data_agent@localhost:5432/data_agent"
+    try:
+        import psycopg
+
+        with psycopg.connect(admin_url, autocommit=True) as conn:
+            cur = conn.execute("SELECT 1 FROM pg_database WHERE datname = 'data_agent_test'")
+            if not cur.fetchone():
+                conn.execute("CREATE DATABASE data_agent_test")
+    except Exception:
+        # If we can't create the DB (no psycopg, no server), let the tests
+        # fail naturally with a connection error — don't hide the cause.
+        return
+
+    subprocess.run(
+        ["alembic", "upgrade", "head"],
+        env={**os.environ, "DATABASE_URL": _TEST_DATABASE_URL},
+        capture_output=True,
+    )
 
 
 @pytest.fixture
