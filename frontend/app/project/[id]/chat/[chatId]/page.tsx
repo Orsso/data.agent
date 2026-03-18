@@ -2,9 +2,8 @@
 
 import { useCallback, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
-import Image from 'next/image'
-import { AlertCircle } from 'lucide-react'
-import { motion, AnimatePresence, type Variants } from 'motion/react'
+import { AlertCircle, Sparkles } from 'lucide-react'
+import { motion, AnimatePresence, LayoutGroup, type Variants } from 'motion/react'
 
 import {
   Conversation,
@@ -29,6 +28,7 @@ import { CardProposals } from '@/components/chat/card-proposals'
 import { CardSelectionChips } from '@/components/chat/card-selection-chips'
 import { QuestionInput } from '@/components/chat/question-input'
 import { PulsingDots } from '@/components/ui/pulsing-dots'
+import { BrandLogo } from '@/components/shared/brand-logo'
 
 import { useProjectStore } from '@/lib/stores/project-store'
 import { useChatsStore } from '@/lib/stores/chats-store'
@@ -132,10 +132,24 @@ export default function ProjectChatPage() {
     }
   }, [isStreaming, hasPendingQuestions])
 
+  // Track streaming→final transition to skip entry animation on the
+  // last assistant message (avoids flash when streaming completes).
+  const prevIsStreamingRef = useRef(isStreaming)
+  const justFinishedStreaming = prevIsStreamingRef.current && !isStreaming
+  useEffect(() => {
+    prevIsStreamingRef.current = isStreaming
+  })
+
+  // Track whether we went through the analyzing phase, so we only
+  // animate suggestion chips when they replace skeletons (not on reload).
+  const wasAnalyzingRef = useRef(false)
+
   const hasSources = sources.length > 0
-  const showAnalyzing = isAnalyzing && messages.length === 0 && !isLoading
-  const showSuggestions = hasSources && messages.length === 0 && !isAnalyzing && !isLoading && suggestedQuestions.length > 0
-  const showWelcome = !hasSources && messages.length === 0 && !isAnalyzing && !isStreaming && !isLoading
+  const isEmpty = messages.length === 0 && !isStreaming && !isLoading
+  const showAnalyzing = isAnalyzing && isEmpty
+  if (showAnalyzing) wasAnalyzingRef.current = true
+  const showSuggestions = hasSources && isEmpty && !isAnalyzing && suggestedQuestions.length > 0
+  const showWelcome = !hasSources && isEmpty && !isAnalyzing
   const showWaitingIndicator = isStreaming && streamingMessage
     && (streamingMessage.cot_entries ?? []).length === 0 && !streamingMessage.content
     && !streamingMessage.active_tool
@@ -144,169 +158,240 @@ export default function ProjectChatPage() {
     ? 'Ask a question about your data...'
     : 'Ask me anything, or upload data to analyze...'
 
+  // ── Prompt bar (shared via layoutId for smooth position animation) ──
+  const promptBar = (
+    <motion.div
+      layoutId="prompt-bar"
+      layout="position"
+      transition={{ layout: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } }}
+      className="rounded-xl border border-border/40 bg-card/80 shadow-lg backdrop-blur-sm transition-[border-color,box-shadow] focus-within:border-primary/50 focus-within:shadow-xl"
+    >
+      <PromptInput onSubmit={handleSubmit}>
+        <CardSelectionChips />
+        <PromptInputTextarea
+          ref={textareaRef}
+          placeholder={placeholderText}
+          className="border-0 bg-transparent focus-visible:ring-0"
+        />
+        <PromptInputFooter>
+          <div />
+          <PromptInputSubmit
+            disabled={isStreaming || hasPendingQuestions}
+            className="bg-primary hover:bg-primary/90 active:scale-95 transition-transform"
+          />
+        </PromptInputFooter>
+      </PromptInput>
+    </motion.div>
+  )
+
+  // Which phase are the suggestion chips in?
+  const suggestionsPhase = showAnalyzing
+    ? 'skeleton' as const
+    : showSuggestions
+      ? 'ready' as const
+      : null
+
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
-      <Conversation className="flex-1">
-        <ConversationContent className="mx-auto max-w-3xl py-6">
-          {isLoading && (
-            <div className="flex items-center justify-center py-16">
-              <PulsingDots />
-            </div>
-          )}
-
-          {showAnalyzing && (
-            <div className="flex items-center justify-center py-16">
-              <Image
-                src="/icons/data-loading.svg"
-                alt=""
-                width={96}
-                height={96}
-                className="h-24 w-auto"
-              />
-            </div>
-          )}
-
-          {showWelcome && (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <h2 className="text-xl font-semibold text-primary mb-2 font-everett">
-                Welcome!
-              </h2>
-              <p className="text-muted-foreground max-w-md">
-                Upload data to analyze, or just ask me anything about data analysis, statistics, or visualization.
-              </p>
-            </div>
-          )}
-
-          <AnimatePresence initial={false}>
-            {messages.map((msg) => (
-              <motion.div
-                key={msg.id}
-                variants={messageVariants}
-                initial="hidden"
-                animate="visible"
-                layout
-              >
-                <Message from={msg.role}>
-                  {msg.role === 'assistant' && (
-                    <ThinkingBlock
-                      cotEntries={msg.cot_entries}
-                      thinkingDurationS={msg.thinking_duration_s}
-                    />
-                  )}
-                  {msg.role === 'assistant' && msg.todos && msg.todos.length > 0 && (
-                    <TodoBlock todos={msg.todos} />
-                  )}
-                  {msg.content && msg.is_error ? (
-                    <div className="flex items-start gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-                      <AlertCircle className="mt-0.5 size-4 shrink-0" />
-                      <span>{msg.content}</span>
-                    </div>
-                  ) : msg.content ? (
-                    <MessageContent>
-                      <MessageResponse>{msg.content}</MessageResponse>
-                    </MessageContent>
-                  ) : null}
-                  {msg.has_figures && msg.figure_count > 0 && (
-                    <MessageFigures
-                      projectId={projectId}
-                      chatId={resolvedChatId}
-                      messageId={msg.backend_msg_id || msg.id}
-                      figureCount={msg.figure_count}
-                      code={msg.code}
-                    />
-                  )}
-                  {msg.proposals && msg.proposals.length > 0 && (
-                    <CardProposals
-                      projectId={projectId}
-                      chatId={resolvedChatId}
-                      messageId={msg.backend_msg_id || msg.id}
-                      proposals={msg.proposals}
-                    />
-                  )}
-                  {msg.asked_questions && msg.asked_questions.length > 0 && (
-                    <QuestionInput
-                      questions={msg.asked_questions}
-                      onSubmit={msg === lastMsg && hasPendingQuestions ? handleQuestionSubmit : undefined}
-                    />
-                  )}
-                </Message>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-
-          {showWaitingIndicator && (
-            <Message from="assistant">
-              <PulsingDots />
-            </Message>
-          )}
-
-          {isStreaming && streamingMessage && !showWaitingIndicator && (
+    <LayoutGroup>
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* ── Empty state: centered hero ── */}
+        <AnimatePresence>
+          {isEmpty && (
             <motion.div
-              initial={{ opacity: 0, y: 8 }}
+              key="empty-hero"
+              className="flex flex-1 flex-col items-center justify-center px-4"
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, y: -24, transition: { duration: 0.25, ease: 'easeIn' } }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
             >
-              <Message from="assistant">
-                <ThinkingBlock
-                  cotEntries={streamingMessage.cot_entries}
-                  activeTool={streamingMessage.active_tool}
-                  isStreaming
-                />
-                {streamingMessage.todos && streamingMessage.todos.length > 0 && (
-                  <TodoBlock todos={streamingMessage.todos} isStreaming />
+              <div className="flex w-full max-w-2xl flex-col items-center gap-8">
+                {/* Hero */}
+                <div className="flex flex-col items-center gap-3">
+                  <BrandLogo size="lg" animateOnMount expanded />
+                  <AnimatePresence mode="wait">
+                    <motion.p
+                      key={showAnalyzing ? 'analyzing' : hasSources ? 'ready' : 'welcome'}
+                      className="text-muted-foreground text-sm"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {showAnalyzing
+                        ? 'Analyzing your data...'
+                        : hasSources
+                          ? 'Your data is ready. What would you like to explore?'
+                          : 'Upload data to analyze, or just ask me anything.'}
+                    </motion.p>
+                  </AnimatePresence>
+                </div>
+
+                {/* Suggestions / skeleton placeholders */}
+                {suggestionsPhase && (
+                  <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+                    <AnimatePresence mode="popLayout">
+                      {suggestionsPhase === 'skeleton'
+                        ? Array.from({ length: 4 }, (_, i) => (
+                            <motion.div
+                              key={`skeleton-${i}`}
+                              className="flex items-start gap-2.5 rounded-xl border border-border/30 px-4 py-3"
+                              exit={{ opacity: 0, scale: 0.95 }}
+                              transition={{ duration: 0.2, delay: i * 0.03 }}
+                            >
+                              <div className="mt-0.5 size-4 shrink-0 rounded skeleton-shimmer" />
+                              <div className="flex flex-1 flex-col gap-1.5">
+                                <div className="h-3.5 w-3/4 rounded skeleton-shimmer" />
+                                <div className="h-3.5 w-1/2 rounded skeleton-shimmer" />
+                              </div>
+                            </motion.div>
+                          ))
+                        : suggestedQuestions.map((q, i) => (
+                            <motion.button
+                              key={`suggestion-${i}`}
+                              type="button"
+                              onClick={() => handleSuggestionClick(q)}
+                              initial={wasAnalyzingRef.current ? { opacity: 0, y: 6 } : false}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.3, delay: wasAnalyzingRef.current ? i * 0.07 : 0 }}
+                              className="group/chip flex items-start gap-2.5 rounded-xl border border-border/50 bg-card/60 px-4 py-3 text-left text-sm text-foreground backdrop-blur-sm transition-all hover:border-primary/30 hover:bg-card hover:shadow-md active:scale-[0.98]"
+                            >
+                              <Sparkles className="mt-0.5 size-4 shrink-0 text-accent transition-colors group-hover/chip:text-primary" />
+                              <span>{q}</span>
+                            </motion.button>
+                          ))}
+                    </AnimatePresence>
+                  </div>
                 )}
-                {streamingMessage.content && (
-                  <MessageContent>
-                    <MessageResponse>
-                      {streamingMessage.content}
-                    </MessageResponse>
-                    <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-primary" />
-                  </MessageContent>
-                )}
-              </Message>
+
+                {/* Prompt bar — centered position */}
+                <div className="w-full">
+                  {promptBar}
+                </div>
+              </div>
             </motion.div>
           )}
+        </AnimatePresence>
 
-        </ConversationContent>
-        <ConversationScrollButton />
-      </Conversation>
+        {/* ── Conversation layout ── */}
+        {!isEmpty && (
+          <>
+            <Conversation className="flex-1">
+              <ConversationContent className="mx-auto max-w-3xl py-6">
+                {isLoading && (
+                  <div className="flex items-center justify-center py-16">
+                    <PulsingDots />
+                  </div>
+                )}
 
-      <div className="bg-gradient-to-t from-background via-background to-transparent px-4 pb-4 pt-2">
-        <div className="mx-auto max-w-3xl">
-          {showSuggestions && (
-            <div className="grid grid-cols-2 gap-2 pb-3">
-              {suggestedQuestions.map((q, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => handleSuggestionClick(q)}
-                  className="rounded-lg border border-border/60 bg-card px-3 py-2 text-left text-sm text-foreground shadow-sm transition-all hover:border-primary/30 hover:shadow-md"
-                >
-                  {q}
-                </button>
-              ))}
+                <AnimatePresence initial={false}>
+                  {messages.map((msg) => {
+                    const isLastMsg = msg === lastMsg
+                    // Skip fade-in animation for the message that was just streamed
+                    const skipEntry = isLastMsg && justFinishedStreaming
+
+                    return (
+                      <motion.div
+                        key={msg.id}
+                        variants={messageVariants}
+                        initial={skipEntry ? 'visible' : 'hidden'}
+                        animate="visible"
+                        layout
+                      >
+                        <Message from={msg.role}>
+                          {msg.role === 'assistant' && (
+                            <ThinkingBlock
+                              cotEntries={msg.cot_entries}
+                              thinkingDurationS={msg.thinking_duration_s}
+                            />
+                          )}
+                          {msg.role === 'assistant' && msg.todos && msg.todos.length > 0 && (
+                            <TodoBlock todos={msg.todos} />
+                          )}
+                          {msg.content && msg.is_error ? (
+                            <div className="flex items-start gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                              <span>{msg.content}</span>
+                            </div>
+                          ) : msg.content ? (
+                            <MessageContent>
+                              <MessageResponse>{msg.content}</MessageResponse>
+                            </MessageContent>
+                          ) : null}
+                          {msg.has_figures && msg.figure_count > 0 && (
+                            <MessageFigures
+                              projectId={projectId}
+                              chatId={resolvedChatId}
+                              messageId={msg.backend_msg_id || msg.id}
+                              figureCount={msg.figure_count}
+                              code={msg.code}
+                            />
+                          )}
+                          {msg.proposals && msg.proposals.length > 0 && (
+                            <CardProposals
+                              projectId={projectId}
+                              chatId={resolvedChatId}
+                              messageId={msg.backend_msg_id || msg.id}
+                              proposals={msg.proposals}
+                            />
+                          )}
+                          {msg.asked_questions && msg.asked_questions.length > 0 && (
+                            <QuestionInput
+                              questions={msg.asked_questions}
+                              onSubmit={msg === lastMsg && hasPendingQuestions ? handleQuestionSubmit : undefined}
+                            />
+                          )}
+                        </Message>
+                      </motion.div>
+                    )
+                  })}
+                </AnimatePresence>
+
+                {showWaitingIndicator && (
+                  <Message from="assistant">
+                    <PulsingDots />
+                  </Message>
+                )}
+
+                {isStreaming && streamingMessage && !showWaitingIndicator && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Message from="assistant">
+                      <ThinkingBlock
+                        cotEntries={streamingMessage.cot_entries}
+                        activeTool={streamingMessage.active_tool}
+                        isStreaming
+                      />
+                      {streamingMessage.todos && streamingMessage.todos.length > 0 && (
+                        <TodoBlock todos={streamingMessage.todos} isStreaming />
+                      )}
+                      {streamingMessage.content && (
+                        <MessageContent>
+                          <MessageResponse className="streaming-cursor">
+                            {streamingMessage.content}
+                          </MessageResponse>
+                        </MessageContent>
+                      )}
+                    </Message>
+                  </motion.div>
+                )}
+
+              </ConversationContent>
+              <ConversationScrollButton />
+            </Conversation>
+
+            {/* Prompt bar — bottom position */}
+            <div className="px-4 pb-4">
+              <div className="mx-auto max-w-3xl">
+                {promptBar}
+              </div>
             </div>
-          )}
-          <div className="rounded-xl border border-border/40 bg-card shadow-lg">
-            <PromptInput onSubmit={handleSubmit}>
-              <CardSelectionChips />
-              <PromptInputTextarea
-                ref={textareaRef}
-                placeholder={placeholderText}
-                disabled={isStreaming || hasPendingQuestions}
-                className="border-0 bg-transparent focus-visible:ring-0"
-              />
-              <PromptInputFooter>
-                <div />
-                <PromptInputSubmit
-                  disabled={isStreaming || hasPendingQuestions}
-                  className="bg-primary hover:bg-primary/90"
-                />
-              </PromptInputFooter>
-            </PromptInput>
-          </div>
-        </div>
+          </>
+        )}
       </div>
-    </div>
+    </LayoutGroup>
   )
 }
