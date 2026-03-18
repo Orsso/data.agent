@@ -23,9 +23,7 @@ router = APIRouter(prefix="/api/projects/{project_id}/dashboard-cards", tags=["d
 
 
 @router.get("", response_model=list[DashboardCardResponse])
-async def get_project_dashboard_cards(
-    project_id: str, db: AsyncSession = Depends(get_db)
-):
+async def get_project_dashboard_cards(project_id: str, db: AsyncSession = Depends(get_db)):
     project_row = await require_project(project_id, db)
     rows = await DashboardCardRepository(db).list_by_project(project_row.id)
     return [card_response(r) for r in rows]
@@ -117,9 +115,7 @@ content_router = APIRouter(
 
 
 @content_router.get("")
-async def get_dashboard_content(
-    project_id: str, db: AsyncSession = Depends(get_db)
-):
+async def get_dashboard_content(project_id: str, db: AsyncSession = Depends(get_db)):
     project_row = await require_project(project_id, db)
     content = await ProjectRepository(db).get_dashboard_content(project_row.id)
     return content

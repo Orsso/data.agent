@@ -100,10 +100,17 @@ class ProjectManager:
                     proj.sources.add(row.name, source)
                     hydrated.append(row.name)
                 except Exception as exc:
-                    logger.warning("Failed to hydrate source '%s' [project=%s]: %s", row.name, project_id, exc)
+                    logger.warning(
+                        "Failed to hydrate source '%s' [project=%s]: %s", row.name, project_id, exc
+                    )
 
             if hydrated:
-                logger.info("Hydrated %d source(s) [project=%s]: %s", len(hydrated), project_id, ", ".join(hydrated))
+                logger.info(
+                    "Hydrated %d source(s) [project=%s]: %s",
+                    len(hydrated),
+                    project_id,
+                    ", ".join(hydrated),
+                )
 
         # Always reload dashboard cards from DB to stay in sync
         card_rows = await DashboardCardRepository(db_session).list_by_project(uuid.UUID(project_id))

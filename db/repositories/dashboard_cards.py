@@ -1,4 +1,3 @@
-
 import uuid
 
 from sqlalchemy import delete, select
@@ -11,9 +10,7 @@ class DashboardCardRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def replace_all(
-        self, project_id: uuid.UUID, cards: list[dict]
-    ) -> list[DashboardCardRow]:
+    async def replace_all(self, project_id: uuid.UUID, cards: list[dict]) -> list[DashboardCardRow]:
         """Delete all existing cards for the project and insert new ones."""
         await self._session.execute(
             delete(DashboardCardRow).where(DashboardCardRow.project_id == project_id)
@@ -86,9 +83,7 @@ class DashboardCardRepository:
         await self._session.flush()
         return row
 
-    async def update_layouts(
-        self, project_id: uuid.UUID, items: list[dict]
-    ) -> None:
+    async def update_layouts(self, project_id: uuid.UUID, items: list[dict]) -> None:
         """Batch-update layout positions for multiple cards."""
         for item in items:
             card_id = uuid.UUID(item["id"])

@@ -1,6 +1,5 @@
 """Host-side manager for sandbox Docker containers."""
 
-
 import asyncio
 import contextlib
 import io
@@ -162,7 +161,8 @@ class SandboxManager:
         )
         logger.info(
             "Docker container started for %s (%dms)",
-            project_id, int((time.monotonic() - t_docker) * 1000),
+            project_id,
+            int((time.monotonic() - t_docker) * 1000),
         )
 
         try:
@@ -190,14 +190,17 @@ class SandboxManager:
                 self._handles.pop(project_id, None)
             with contextlib.suppress(docker.errors.APIError):
                 await loop.run_in_executor(
-                    None, lambda: container.remove(force=True),
+                    None,
+                    lambda: container.remove(force=True),
                 )
             raise
 
         total_ms = int((time.monotonic() - t0) * 1000)
         logger.info(
             "Sandbox ready for project %s at %s (total %dms)",
-            project_id, base_url, total_ms,
+            project_id,
+            base_url,
+            total_ms,
         )
         return handle
 
@@ -217,7 +220,9 @@ class SandboxManager:
         except docker.errors.NotFound:
             logger.debug("Container already removed for project %s", project_id)
         except docker.errors.APIError as exc:
-            logger.warning("Docker API error stopping container for project %s: %s", project_id, exc)
+            logger.warning(
+                "Docker API error stopping container for project %s: %s", project_id, exc
+            )
         self._project_locks.pop(project_id, None)
         elapsed_ms = int((time.monotonic() - t0) * 1000)
         logger.info("Container destroyed for project %s (%dms)", project_id, elapsed_ms)
@@ -292,7 +297,9 @@ class SandboxManager:
             elapsed_ms = int((time.monotonic() - t0) * 1000)
             logger.info(
                 "Source '%s' uploaded to sandbox %s (%dms)",
-                name, project_id, elapsed_ms,
+                name,
+                project_id,
+                elapsed_ms,
             )
             return resp.json()
         except httpx.HTTPError as exc:
@@ -321,7 +328,8 @@ class SandboxManager:
     def _reap_orphaned_containers(self) -> None:
         """Remove sandbox containers left over from a previous backend run."""
         orphans = self._client.containers.list(
-            all=True, filters={"label": [f"{k}={v}" for k, v in _SANDBOX_LABEL.items()]},
+            all=True,
+            filters={"label": [f"{k}={v}" for k, v in _SANDBOX_LABEL.items()]},
         )
         if not orphans:
             return
@@ -333,7 +341,9 @@ class SandboxManager:
                 logger.debug("Reaped orphaned container %s", ctr.name)
             except docker.errors.APIError as exc:
                 logger.warning("Failed to reap container %s: %s", ctr.name, exc)
-        logger.info("Startup reap: removed %d/%d orphaned sandbox container(s)", removed, len(orphans))
+        logger.info(
+            "Startup reap: removed %d/%d orphaned sandbox container(s)", removed, len(orphans)
+        )
 
     async def _wait_healthy(self, handle: _Handle) -> None:
         """Poll /health until the container is ready."""
@@ -346,7 +356,9 @@ class SandboxManager:
                 resp = await self._api.get(f"{handle.base_url}/health")
                 if resp.status_code == 200:
                     elapsed = (time.monotonic() - t0) * 1000
-                    logger.info("Health check passed for %s (%dms)", handle.project_id, int(elapsed))
+                    logger.info(
+                        "Health check passed for %s (%dms)", handle.project_id, int(elapsed)
+                    )
                     return
             except httpx.HTTPError:
                 pass

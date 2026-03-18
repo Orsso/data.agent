@@ -80,7 +80,9 @@ async def execute_python(code: str, config: RunnableConfig) -> str:
 
     error = response.get("error")
     if error:
-        logger.warning("execute_python error [project=%s] (%dms): %s", ctx.project_id, elapsed_ms, error)
+        logger.warning(
+            "execute_python error [project=%s] (%dms): %s", ctx.project_id, elapsed_ms, error
+        )
         source_names = list(ctx.sources.get_all().keys())
         parts = [f"Error: {error}"]
         if figs:
@@ -93,7 +95,12 @@ async def execute_python(code: str, config: RunnableConfig) -> str:
 
     logger.info(
         "execute_python result: %d new figs (%d total), %d new cards (%d total), %d card_updates (%dms)",
-        len(figs), len(ctx.turn.figs), len(cards), len(ctx.turn.cards), len(card_updates), elapsed_ms,
+        len(figs),
+        len(ctx.turn.figs),
+        len(cards),
+        len(ctx.turn.cards),
+        len(card_updates),
+        elapsed_ms,
     )
     if not figs and stdout:
         logger.debug("execute_python stdout (no figs): %.300s", stdout.strip())
@@ -105,7 +112,10 @@ async def execute_python(code: str, config: RunnableConfig) -> str:
             'Use `card_updates = {"<card_id>": fig}` instead of `fig = ...`. '
             "Re-run the code with `card_updates`."
         )
-        return _format_output(result, figs, cards, card_updates, stdout, total_figs=len(ctx.turn.figs)) + warning
+        return (
+            _format_output(result, figs, cards, card_updates, stdout, total_figs=len(ctx.turn.figs))
+            + warning
+        )
 
     return _format_output(result, figs, cards, card_updates, stdout, total_figs=len(ctx.turn.figs))
 

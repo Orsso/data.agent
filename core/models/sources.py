@@ -69,4 +69,3 @@ class SourceRegistry:
                 f"Sample data:\n{src.sample_text}"
             )
         return "\n\n---\n\n".join(parts)
-

@@ -59,18 +59,20 @@ async def list_messages(
                     duration_ms=s["duration_ms"],
                 )
                 for s in r.tool_steps
-            ] if r.tool_steps else None,
+            ]
+            if r.tool_steps
+            else None,
             figure_count=len(r.figs) if r.figs else 0,
             todos=[
                 TodoItemResponse(id=t["id"], content=t["content"], status=t["status"])
                 for t in r.todos
-            ] if r.todos else None,
-            proposals=[
-                CardProposalResponse(**p) for p in r.proposals
-            ] if r.proposals else None,
-            asked_questions=[
-                QuestionResponse(**q) for q in r.asked_questions
-            ] if r.asked_questions else None,
+            ]
+            if r.todos
+            else None,
+            proposals=[CardProposalResponse(**p) for p in r.proposals] if r.proposals else None,
+            asked_questions=[QuestionResponse(**q) for q in r.asked_questions]
+            if r.asked_questions
+            else None,
             created_at=r.created_at,
         )
         for r in rows
@@ -89,7 +91,13 @@ async def send_message(
     pm.get_or_load(project_id, model=project_row.model)
     await pm.hydrate(project_id, db)
     thread = pm.get_chat_thread(project_id, chat_id)
-    logger.info('Message [project=%s, chat=%s, cards=%s]: "%.80s"', project_id, chat_id, req.selected_card_ids, req.message)
+    logger.info(
+        'Message [project=%s, chat=%s, cards=%s]: "%.80s"',
+        project_id,
+        chat_id,
+        req.selected_card_ids,
+        req.message,
+    )
 
     msg_count_before = len(thread.chat.messages)
     event_gen = thread.run_chat(req.message, req.selected_card_ids)
@@ -137,14 +145,18 @@ async def get_message_figures(
         if msg.msg_id == message_id:
             logger.debug(
                 "Figures found in memory [chat=%s, msg=%s]: %d fig(s)",
-                chat_id, message_id, len(msg.figs) if msg.figs else 0,
+                chat_id,
+                message_id,
+                len(msg.figs) if msg.figs else 0,
             )
             return msg.figs or []
 
     if thread.chat.pending_msg_id == message_id:
         logger.debug(
             "Figures found in pending turn [chat=%s, msg=%s]: %d fig(s)",
-            chat_id, message_id, len(thread.turn.figs),
+            chat_id,
+            message_id,
+            len(thread.turn.figs),
         )
         return list(thread.turn.figs)
 
@@ -153,7 +165,8 @@ async def get_message_figures(
     except ValueError as exc:
         logger.warning(
             "Figure request with non-UUID message_id [chat=%s, msg=%s]",
-            chat_id, message_id,
+            chat_id,
+            message_id,
         )
         raise HTTPException(404, "Message not found") from exc
 
@@ -161,13 +174,18 @@ async def get_message_figures(
     if repo_figs:
         logger.debug(
             "Figures found in DB [chat=%s, msg=%s]: %d fig(s)",
-            chat_id, message_id, len(repo_figs),
+            chat_id,
+            message_id,
+            len(repo_figs),
         )
         return repo_figs
 
     logger.warning(
         "Figures not found anywhere [chat=%s, msg=%s, in_memory_msgs=%d, pending_msg=%s]",
-        chat_id, message_id, len(thread.chat.messages), thread.chat.pending_msg_id,
+        chat_id,
+        message_id,
+        len(thread.chat.messages),
+        thread.chat.pending_msg_id,
     )
     raise HTTPException(404, "Message not found")
 
@@ -191,19 +209,24 @@ def _streaming_response_with_persistence(event_gen, thread, chat_id, msg_count_b
                             role=msg.role,
                             content=msg.content,
                             code=msg.code,
-                            tool_steps=[asdict(s) for s in msg.tool_steps] if msg.tool_steps else None,
+                            tool_steps=[asdict(s) for s in msg.tool_steps]
+                            if msg.tool_steps
+                            else None,
                             todos=[asdict(t) for t in msg.todos] if msg.todos else None,
                             thinking=msg.thinking,
                             thinking_duration_s=msg.thinking_duration_s,
                             figs=msg.figs if msg.figs else None,
                             proposals=[asdict(p) for p in msg.proposals] if msg.proposals else None,
-                            asked_questions=[asdict(q) for q in msg.asked_questions] if msg.asked_questions else None,
+                            asked_questions=[asdict(q) for q in msg.asked_questions]
+                            if msg.asked_questions
+                            else None,
                             created_at=base_ts + timedelta(microseconds=i),
                         )
                     await session.commit()
                     logger.info(
                         "Persisted %d message(s) [chat=%s]",
-                        len(new_messages), chat_id,
+                        len(new_messages),
+                        chat_id,
                     )
             except Exception:
                 logger.error("Failed to persist messages [chat=%s]", chat_id, exc_info=True)
@@ -275,7 +298,7 @@ async def accept_proposal(
     # Update in-memory project state
     project = pm.get_project(project_id)
     if project:
-        for card in (project.dashboard_cards or []):
+        for card in project.dashboard_cards or []:
             if card.id == str(card_id):
                 card.fig = row.fig
                 card.code = row.code

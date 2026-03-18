@@ -1,4 +1,3 @@
-
 import uuid
 from datetime import datetime
 
@@ -48,9 +47,7 @@ class MessageRepository:
 
     async def list_by_chat(self, chat_id: uuid.UUID) -> list[MessageRow]:
         stmt = (
-            select(MessageRow)
-            .where(MessageRow.chat_id == chat_id)
-            .order_by(MessageRow.created_at)
+            select(MessageRow).where(MessageRow.chat_id == chat_id).order_by(MessageRow.created_at)
         )
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
@@ -68,9 +65,7 @@ class MessageRepository:
             select(MessageRow)
             .where(
                 MessageRow.chat_id == chat_id,
-                MessageRow.proposals.op("@>")(
-                    cast([{"proposal_id": proposal_id}], JSONB)
-                ),
+                MessageRow.proposals.op("@>")(cast([{"proposal_id": proposal_id}], JSONB)),
             )
             .limit(1)
         )

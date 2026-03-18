@@ -35,7 +35,10 @@ def make_llm(model_name: str, api_key: str, **overrides) -> ChatGoogleGenerative
 
 
 def build_chat_graph(
-    model_name: str, api_key: str, checkpointer=None, system_prompt: str | None = None,
+    model_name: str,
+    api_key: str,
+    checkpointer=None,
+    system_prompt: str | None = None,
 ):
     llm = make_llm(model_name, api_key)
     return create_agent(

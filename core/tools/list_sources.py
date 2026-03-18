@@ -18,10 +18,12 @@ def list_sources(config: RunnableConfig) -> str:
 
     sources = []
     for name, src in ctx.sources.get_all().items():
-        sources.append({
-            "name": name,
-            "rows": src.row_count,
-            "columns": src.columns,
-        })
+        sources.append(
+            {
+                "name": name,
+                "rows": src.row_count,
+                "columns": src.columns,
+            }
+        )
 
     return json.dumps({"sources": sources}, ensure_ascii=False)

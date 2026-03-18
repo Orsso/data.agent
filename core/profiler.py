@@ -58,7 +58,7 @@ def _profile_column(series: pd.Series) -> ColumnProfile:
 
 
 def _detect_format(series: pd.Series) -> str | None:
-    if series.dtype != "object":
+    if series.dtype not in ("object", "str", "string"):
         return None
     non_null = series.dropna()
     if len(non_null) == 0:

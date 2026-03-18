@@ -65,9 +65,7 @@ class ChatThread:
         source_count = p.sources.count
         system_prompt = build_chat_system(has_sources=has_sources, source_count=source_count)
         p.mark_graph_built()
-        return build_chat_graph(
-            p.model, p.api_key, self._checkpointer, system_prompt=system_prompt
-        )
+        return build_chat_graph(p.model, p.api_key, self._checkpointer, system_prompt=system_prompt)
 
     def _ensure_graph_fresh(self):
         if self._project.needs_graph_rebuild():
@@ -147,7 +145,8 @@ class ChatThread:
 
         resume_value = {"answers": [{"question": a.question, "answer": a.answer} for a in answers]}
         async for event in self._stream_and_finalize(
-            Command(resume=resume_value), msg_id,
+            Command(resume=resume_value),
+            msg_id,
             selected_card_ids=self.chat.selected_card_ids,
         ):
             yield event
@@ -169,7 +168,9 @@ class ChatThread:
 
         try:
             async for event in self._project.stream_graph(
-                self._graph, graph_input, config,
+                self._graph,
+                graph_input,
+                config,
             ):
                 self._accumulate(event, content_parts, tool_steps, thinking_parts)
                 yield event
@@ -181,7 +182,9 @@ class ChatThread:
                 questions = self._extract_interrupt_questions(state)
                 logger.info(
                     "Graph interrupted [chat=%s]: %d question(s), next=%s",
-                    self.chat_id, len(questions), state.next,
+                    self.chat_id,
+                    len(questions),
+                    state.next,
                 )
                 if questions:
                     self.chat.pending_questions = questions
@@ -206,14 +209,20 @@ class ChatThread:
 
                 self.chat.pending_msg_id = msg_id
                 yield DoneEvent(
-                    loop_result=LoopResult(content=content, pending=True, figs=list(self.turn.figs)),
+                    loop_result=LoopResult(
+                        content=content, pending=True, figs=list(self.turn.figs)
+                    ),
                     msg_id=msg_id,
                 )
             else:
                 elapsed_s = time.perf_counter() - t0
                 self._finalize_chat(
-                    content_parts, tool_steps, thinking_parts,
-                    msg_id, selected_card_ids, elapsed_s=elapsed_s,
+                    content_parts,
+                    tool_steps,
+                    thinking_parts,
+                    msg_id,
+                    selected_card_ids,
+                    elapsed_s=elapsed_s,
                 )
                 last_msg = self.chat.messages[-1]
                 if last_msg.proposals:
@@ -229,7 +238,12 @@ class ChatThread:
                         self._pending_title = title
                         yield ChatRenamedEvent(chat_id=self.chat_id, title=title)
         except Exception as exc:
-            logger.error("chat failed [project=%s, chat=%s]", self._project.project_id, self.chat_id, exc_info=True)
+            logger.error(
+                "chat failed [project=%s, chat=%s]",
+                self._project.project_id,
+                self.chat_id,
+                exc_info=True,
+            )
             detail = str(exc).strip() or type(exc).__name__
             yield DoneEvent(
                 loop_result=LoopResult(content=f"Something went wrong: {detail}", error=detail),
@@ -238,7 +252,9 @@ class ChatThread:
 
         logger.info(
             "Chat done [project=%s, chat=%s] (%.1fs)",
-            self._project.project_id, self.chat_id, time.perf_counter() - t0,
+            self._project.project_id,
+            self.chat_id,
+            time.perf_counter() - t0,
         )
 
     @staticmethod
@@ -266,15 +282,18 @@ class ChatThread:
             raw = resp.content
             if isinstance(raw, list):
                 raw = "".join(
-                    part if isinstance(part, str) else part.get("text", "")
-                    for part in raw
+                    part if isinstance(part, str) else part.get("text", "") for part in raw
                 )
             title = raw.strip().strip('"').strip("'")
             if title:
                 logger.info("Auto-generated title for chat=%s: %s", self.chat_id, title)
                 return title
         except Exception:
-            logger.warning("Failed to generate chat title [chat=%s], using fallback", self.chat_id, exc_info=True)
+            logger.warning(
+                "Failed to generate chat title [chat=%s], using fallback",
+                self.chat_id,
+                exc_info=True,
+            )
         return fallback
 
     def _build_user_message(self, query: str, card_ctx: str | None) -> str:
@@ -337,8 +356,12 @@ class ChatThread:
 
     def _finalize_chat(
         self,
-        content_parts, tool_steps, thinking_parts,
-        msg_id, selected_card_ids=None, elapsed_s: float | None = None,
+        content_parts,
+        tool_steps,
+        thinking_parts,
+        msg_id,
+        selected_card_ids=None,
+        elapsed_s: float | None = None,
     ):
         content = "".join(content_parts).strip()
         figs = list(self.turn.figs)
@@ -351,17 +374,19 @@ class ChatThread:
         for card in selected_cards:
             proposed_fig = self.turn.card_updates.get(card.id)
             if proposed_fig is not None:
-                proposals.append(CardProposal(
-                    proposal_id=uuid.uuid4().hex[:8],
-                    card_id=card.id,
-                    card_title=card.title,
-                    current_fig=card.fig,
-                    current_code=card.code,
-                    current_value=card.value,
-                    proposed_fig=proposed_fig,
-                    proposed_code=code,
-                    proposed_value=None,
-                ))
+                proposals.append(
+                    CardProposal(
+                        proposal_id=uuid.uuid4().hex[:8],
+                        card_id=card.id,
+                        card_title=card.title,
+                        current_fig=card.fig,
+                        current_code=card.code,
+                        current_value=card.value,
+                        proposed_fig=proposed_fig,
+                        proposed_code=code,
+                        proposed_value=None,
+                    )
+                )
 
         thinking = "".join(thinking_parts) if thinking_parts else None
         has_cot = thinking or tool_steps
@@ -371,10 +396,9 @@ class ChatThread:
             msg_id=msg_id,
             code=code,
             tool_steps=tool_steps,
-            todos=[
-                TodoItem(id=t.id, content=t.content, status=t.status)
-                for t in self.chat.todos
-            ] if self.chat.todos else [],
+            todos=[TodoItem(id=t.id, content=t.content, status=t.status) for t in self.chat.todos]
+            if self.chat.todos
+            else [],
             thinking=thinking,
             thinking_duration_s=round(elapsed_s, 1) if has_cot and elapsed_s else None,
         )

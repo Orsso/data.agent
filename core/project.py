@@ -74,14 +74,21 @@ class Project:
         await self.sandbox.upload_source(self.project_id, name, parquet_bytes)
 
         source = DataSource(
-            name=name, profile=profile, origin="csv",
-            row_count=row_count, columns=columns, sample_text=sample_text,
+            name=name,
+            profile=profile,
+            origin="csv",
+            row_count=row_count,
+            columns=columns,
+            sample_text=sample_text,
         )
         self.sources.add(name, source)
 
         logger.info(
             "add_source '%s' (%d x %d) [project=%s]",
-            name, row_count, len(columns), self.project_id,
+            name,
+            row_count,
+            len(columns),
+            self.project_id,
         )
         return source
 
@@ -106,14 +113,18 @@ class Project:
             async for event in self._run_pipeline_inner(pipeline_type, turn):
                 yield event
 
-    async def _run_pipeline_inner(self, pipeline_type: Literal["insights", "dashboard"], turn: TurnState):
+    async def _run_pipeline_inner(
+        self, pipeline_type: Literal["insights", "dashboard"], turn: TurnState
+    ):
         if self.sources.is_empty:
             yield PipelineEvent(
                 source=pipeline_type,
-                event=DoneEvent(loop_result=LoopResult(
-                    content="No data sources loaded.",
-                    error="No sources",
-                )),
+                event=DoneEvent(
+                    loop_result=LoopResult(
+                        content="No data sources loaded.",
+                        error="No sources",
+                    )
+                ),
             )
             return
 
@@ -162,25 +173,33 @@ class Project:
             logger.error("%s pipeline timed out [project=%s]", pipeline_type, self.project_id)
             yield PipelineEvent(
                 source=pipeline_type,
-                event=DoneEvent(loop_result=LoopResult(
-                    content="The analysis took too long. Please try again.",
-                    error="Pipeline timed out",
-                )),
+                event=DoneEvent(
+                    loop_result=LoopResult(
+                        content="The analysis took too long. Please try again.",
+                        error="Pipeline timed out",
+                    )
+                ),
             )
         except Exception as exc:
-            logger.error("%s pipeline failed [project=%s]", pipeline_type, self.project_id, exc_info=True)
+            logger.error(
+                "%s pipeline failed [project=%s]", pipeline_type, self.project_id, exc_info=True
+            )
             detail = str(exc).strip() or type(exc).__name__
             yield PipelineEvent(
                 source=pipeline_type,
-                event=DoneEvent(loop_result=LoopResult(
-                    content=f"Something went wrong: {detail}",
-                    error=detail,
-                )),
+                event=DoneEvent(
+                    loop_result=LoopResult(
+                        content=f"Something went wrong: {detail}",
+                        error=detail,
+                    )
+                ),
             )
         finally:
             logger.info(
                 "%s pipeline done [project=%s] (%.1fs)",
-                pipeline_type, self.project_id, time.perf_counter() - t0,
+                pipeline_type,
+                self.project_id,
+                time.perf_counter() - t0,
             )
 
     def get_last_insights(self) -> dict | None:

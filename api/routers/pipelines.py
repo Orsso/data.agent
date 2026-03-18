@@ -34,6 +34,7 @@ async def run_project_pipeline(
         raise HTTPException(400, "No data sources loaded. Upload a CSV first.")
 
     from core.models.turn import TurnState
+
     turn = TurnState()
 
     event_gen = proj.run_pipeline(pipeline_type, turn)
@@ -61,7 +62,8 @@ async def run_project_pipeline(
                         )
                         logger.info(
                             "Insights persisted [project=%s]: %d questions",
-                            project_id, len(questions),
+                            project_id,
+                            len(questions),
                         )
                     else:
                         logger.warning("No insights to persist [project=%s]", project_id)
@@ -88,7 +90,8 @@ async def run_project_pipeline(
                             card.id = str(row.id)
                         logger.info(
                             "Dashboard cards persisted [project=%s]: %d cards",
-                            project_id, len(cards),
+                            project_id,
+                            len(cards),
                         )
 
                         # Generate default BlockNote document
@@ -100,7 +103,9 @@ async def run_project_pipeline(
                                 "id": _bn_id(),
                                 "type": "heading",
                                 "props": {"level": 1},
-                                "content": [{"type": "text", "text": project_row.name or "Dashboard"}],
+                                "content": [
+                                    {"type": "text", "text": project_row.name or "Dashboard"}
+                                ],
                                 "children": [],
                             }
                         ]
@@ -121,7 +126,9 @@ async def run_project_pipeline(
         except Exception:
             logger.error(
                 "Failed to persist %s results [project=%s]",
-                pipeline_type, project_id, exc_info=True,
+                pipeline_type,
+                project_id,
+                exc_info=True,
             )
 
     return StreamingResponse(

@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass, field
 
 from core.state import ChatMessage, TodoItem

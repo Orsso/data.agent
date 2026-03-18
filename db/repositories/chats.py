@@ -1,4 +1,3 @@
-
 import uuid
 
 from sqlalchemy import select
@@ -18,11 +17,7 @@ class ChatRepository:
         return row
 
     async def list_by_project(self, project_id: uuid.UUID) -> list[ChatRow]:
-        stmt = (
-            select(ChatRow)
-            .where(ChatRow.project_id == project_id)
-            .order_by(ChatRow.created_at)
-        )
+        stmt = select(ChatRow).where(ChatRow.project_id == project_id).order_by(ChatRow.created_at)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 

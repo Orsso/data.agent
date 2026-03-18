@@ -39,12 +39,14 @@ async def add_project_source(
     try:
         df = pd.read_csv(io.BytesIO(content))
     except Exception as exc:
-        logger.warning("CSV parse failure for '%s' [project=%s]: %s", file.filename, project_id, exc)
+        logger.warning(
+            "CSV parse failure for '%s' [project=%s]: %s", file.filename, project_id, exc
+        )
         raise HTTPException(400, f"Failed to parse CSV: {exc}") from exc
 
     raw_name = file.filename.rsplit(".", 1)[0].lower()
     name = re.sub(r"[^a-z0-9_]", "_", raw_name)  # keep only identifier chars
-    name = re.sub(r"_+", "_", name).strip("_")    # collapse & trim underscores
+    name = re.sub(r"_+", "_", name).strip("_")  # collapse & trim underscores
     if not name or name[0].isdigit():
         name = f"df_{name}" if name else "source"
 
@@ -93,9 +95,12 @@ async def add_project_source(
     proj = pm.get_or_load(project_id, model=project_row.model)
     try:
         await proj.add_source(
-            name, parquet_bytes,
-            profile=profile, row_count=row_count,
-            columns=columns, sample_text=sample_text,
+            name,
+            parquet_bytes,
+            profile=profile,
+            row_count=row_count,
+            columns=columns,
+            sample_text=sample_text,
         )
     except SandboxError as exc:
         logger.error("Sandbox error adding source '%s' [project=%s]: %s", name, project_id, exc)
@@ -103,7 +108,10 @@ async def add_project_source(
 
     logger.info(
         "Source '%s' added (%d rows, %d cols) [project=%s]",
-        name, row_count, len(columns), project_id,
+        name,
+        row_count,
+        len(columns),
+        project_id,
     )
     return source_response(row)
 
@@ -112,9 +120,7 @@ async def add_project_source(
     "",
     response_model=list[SourceResponse],
 )
-async def list_project_sources(
-    project_id: str, db: AsyncSession = Depends(get_db)
-):
+async def list_project_sources(project_id: str, db: AsyncSession = Depends(get_db)):
     project_row = await require_project(project_id, db)
     rows = await SourceRepository(db).list_by_project(project_row.id)
     return [source_response(r) for r in rows]

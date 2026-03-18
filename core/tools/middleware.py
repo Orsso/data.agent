@@ -20,7 +20,9 @@ async def tool_error_handler(request, handler):
         raise
     except (ToolError, SandboxError) as exc:
         logger.warning(
-            "Tool '%s' error: %s", request.tool_call["name"], exc,
+            "Tool '%s' error: %s",
+            request.tool_call["name"],
+            exc,
         )
         return ToolMessage(
             content=str(exc),
@@ -30,7 +32,10 @@ async def tool_error_handler(request, handler):
         )
     except Exception as exc:
         logger.error(
-            "Tool '%s' unexpected error: %s", request.tool_call["name"], exc, exc_info=True,
+            "Tool '%s' unexpected error: %s",
+            request.tool_call["name"],
+            exc,
+            exc_info=True,
         )
         return ToolMessage(
             content=f"Unexpected error: {exc}",
