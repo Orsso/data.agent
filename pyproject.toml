@@ -24,8 +24,8 @@ dependencies = [
 ]
 
 [dependency-groups]
-lint = ["ruff>=0.11"]
-test = ["pytest>=8.0", "pytest-asyncio>=0.25"]
+lint = ["ruff>=0.11", "pyright>=1.1"]
+test = ["pytest>=8.0", "pytest-asyncio>=0.25", "pytest-cov>=6.0", "httpx>=0.28"]
 dev = [{include-group = "lint"}, {include-group = "test"}]
 
 [tool.ruff]
@@ -45,3 +45,14 @@ quote-style = "double"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+addopts = "--cov=core --cov=api --cov=db --cov-report=term-missing --cov-fail-under=50"
+
+[tool.coverage.run]
+source = ["core", "api", "db"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ ==",
+]
