@@ -66,7 +66,9 @@ interface DashboardGridProps {
   onCardContentChange: (cardId: string, content: unknown[]) => void
 }
 
-export default function DashboardGrid({
+export const DASHBOARD_GRID_ID = 'dashboard-grid'
+
+function DashboardGrid({
   cards,
   onRemoveCard,
   onAddNote,
@@ -151,6 +153,7 @@ export default function DashboardGrid({
 
   return (
     <div
+      id={DASHBOARD_GRID_ID}
       ref={containerRef}
       className="relative h-full w-full"
       onDoubleClick={(e) => {
@@ -223,3 +226,5 @@ export default function DashboardGrid({
     </div>
   )
 }
+
+export default DashboardGrid

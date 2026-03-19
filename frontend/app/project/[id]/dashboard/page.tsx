@@ -1,13 +1,15 @@
 'use client'
 
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { LayoutGridIcon, Loader2 } from 'lucide-react'
+import { DownloadIcon, LayoutGridIcon, Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 
 import { Button } from '@/components/ui/button'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
+import { exportDashboardPdf } from '@/lib/export-dashboard-pdf'
+import { DASHBOARD_GRID_ID } from '@/components/dashboard/dashboard-grid'
 import type { DashboardCard, CardLayout } from '@/lib/domain-types'
 
 const DashboardGrid = dynamic(
@@ -31,6 +33,19 @@ export default function ProjectDashboardPage() {
   const saveCardContent = useDashboardStore((s) => s.saveCardContent)
   const isGeneratingDashboard = useDashboardStore((s) => s.isGeneratingDashboard)
   const generateDashboard = useDashboardStore((s) => s.generateDashboard)
+
+  const [isExporting, setIsExporting] = useState(false)
+
+  const handleExport = useCallback(async () => {
+    const el = document.getElementById(DASHBOARD_GRID_ID)
+    if (!el) return
+    setIsExporting(true)
+    try {
+      await exportDashboardPdf(el)
+    } finally {
+      setIsExporting(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (projectId) loadCards(projectId)
@@ -112,13 +127,28 @@ export default function ProjectDashboardPage() {
           <Loader2 className="animate-spin size-6 text-primary" />
         </div>
       ) : (
-        <DashboardGrid
-          cards={dashboardCards}
-          onRemoveCard={handleRemoveCard}
-          onAddNote={handleAddNote}
-          onLayoutChange={handleLayoutChange}
-          onCardContentChange={handleCardContentChange}
-        />
+        <>
+          <div className="mb-2 flex items-center justify-end">
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={isExporting}
+              className="flex items-center gap-1.5 rounded-md border border-border/60 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {isExporting
+                ? <Loader2 className="size-3.5 animate-spin" />
+                : <DownloadIcon className="size-3.5" />}
+              Export PDF
+            </button>
+          </div>
+          <DashboardGrid
+            cards={dashboardCards}
+            onRemoveCard={handleRemoveCard}
+            onAddNote={handleAddNote}
+            onLayoutChange={handleLayoutChange}
+            onCardContentChange={handleCardContentChange}
+          />
+        </>
       )}
     </div>
   )

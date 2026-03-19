@@ -303,6 +303,16 @@
   outline: none !important;
 }
 
+/* PDF export: hide interactive chrome during capture */
+.exporting .drag-handle,
+.exporting .react-resizable-handle,
+.exporting [aria-label="Add note"] {
+  display: none !important;
+}
+.exporting .react-grid-item {
+  box-shadow: none !important;
+}
+
 /* custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
